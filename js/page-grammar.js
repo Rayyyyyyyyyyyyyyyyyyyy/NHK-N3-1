@@ -1,5 +1,6 @@
 const GrammarPage = {
   data: [],
+  level: null,
   queue: [],
   pointer: 0,
   options: [],
@@ -8,7 +9,7 @@ const GrammarPage = {
 
 function buildGrammarQueue() {
   const total = GrammarPage.data.length;
-  const done = new Set(Store.state.gDone);
+  const done = new Set(Store.state.gDone[GrammarPage.level]);
   const unmastered = [];
   const mastered = [];
   for (let i = 0; i < total; i++) {
@@ -25,12 +26,14 @@ function currentGrammarOptions(item) {
 }
 
 async function renderGrammar(root) {
-  const data = await DataStore.loadGrammar();
+  const level = Store.state.level;
+  const data = await DataStore.loadGrammar(level);
   GrammarPage.data = data;
+  GrammarPage.level = level;
   if (GrammarPage.queue.length === 0) buildGrammarQueue();
 
   root.innerHTML = `
-    <h2 class="page-title">文法</h2>
+    <h2 class="page-title">文法 <span style="font-size:0.85rem;color:var(--indigo);">${LEVEL_LABEL[level]}</span></h2>
     <div id="grammar-body"></div>
   `;
   renderGrammarQuestion();
@@ -44,7 +47,7 @@ function renderGrammarQuestion() {
   GrammarPage.options = currentGrammarOptions(item);
   GrammarPage.answered = false;
   const letters = ['A', 'B', 'C', 'D'];
-  const doneCount = Store.state.gDone.length;
+  const doneCount = Store.state.gDone[GrammarPage.level].length;
 
   const qHtml = escapeHtml(item.q).replace('＿＿', '<span class="blank">＿＿</span>');
 
@@ -79,8 +82,8 @@ function renderGrammarQuestion() {
         else if (b === btn && !isCorrect) b.classList.add('wrong');
       });
 
-      if (isCorrect) Store.markGrammarCorrect(idx);
-      else Store.markGrammarWrong(idx);
+      if (isCorrect) Store.markGrammarCorrect(GrammarPage.level, idx);
+      else Store.markGrammarWrong(GrammarPage.level, idx);
 
       const exp = body.querySelector('#grammar-explanation');
       exp.innerHTML = `
@@ -95,7 +98,7 @@ function renderGrammarQuestion() {
         renderGrammarQuestion();
       });
 
-      body.querySelector('.meta-row span:last-child').textContent = `已掌握 ${Store.state.gDone.length} / ${GrammarPage.data.length}`;
+      body.querySelector('.meta-row span:last-child').textContent = `已掌握 ${Store.state.gDone[GrammarPage.level].length} / ${GrammarPage.data.length}`;
     });
   });
 }

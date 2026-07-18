@@ -33,13 +33,16 @@ function speakText(text) {
 }
 
 async function renderListening(root) {
-  const items = await DataStore.loadListening();
+  const level = Store.state.level;
+  const items = await DataStore.loadListening(level);
   ListeningPage.items = items;
+  ListeningPage.level = level;
 
   root.innerHTML = `
-    <h2 class="page-title">聽力</h2>
-    <p class="meta-row"><span>已作答 ${Store.state.lDone.length} ／ ${items.length}　答對 ${Store.state.lCorrect.length}</span></p>
+    <h2 class="page-title">聽力 <span style="font-size:0.85rem;color:var(--indigo);">${LEVEL_LABEL[level]}</span></h2>
+    <p class="meta-row"><span>已作答 ${Store.state.lDone[level].length} ／ ${items.length}　答對 ${Store.state.lCorrect[level].length}</span></p>
     <div id="listening-list"></div>
+    ${items.length === 0 ? '<p style="padding:12px 0;color:#8892a0;">此等級目前尚無聽力題。</p>' : ''}
 
     <section class="card">
       <p class="card-title">影片課程</p>
@@ -113,7 +116,7 @@ async function renderListening(root) {
         const chosen = options[idxChosen];
         const isCorrect = chosen === item.answer;
         ListeningPage.answers[item.id] = isCorrect;
-        Store.markListeningAnswered(item.id, isCorrect);
+        Store.markListeningAnswered(level, item.id, isCorrect);
 
         card.querySelectorAll('.option-btn').forEach(b => {
           b.disabled = true;
@@ -122,7 +125,7 @@ async function renderListening(root) {
         });
 
         showListeningResult(card, item, options, isCorrect);
-        root.querySelector('.meta-row').innerHTML = `<span>已作答 ${Store.state.lDone.length} ／ ${items.length}　答對 ${Store.state.lCorrect.length}</span>`;
+        root.querySelector('.meta-row').innerHTML = `<span>已作答 ${Store.state.lDone[level].length} ／ ${items.length}　答對 ${Store.state.lCorrect[level].length}</span>`;
       });
     });
   });

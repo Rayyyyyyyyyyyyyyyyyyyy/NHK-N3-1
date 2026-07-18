@@ -78,6 +78,30 @@ a { color: var(--indigo); }
   color: #fff;
 }
 
+.level-pills {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+.level-pill {
+  flex: 1;
+  padding: 8px 0;
+  border-radius: 999px;
+  border: 1px solid #fff;
+  background: transparent;
+  color: #fff;
+  font-family: var(--font-serif);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+}
+.level-pill.active {
+  background: #fff;
+  color: var(--indigo-deep);
+}
+
 /* ---------- Main ---------- */
 .app-main {
   max-width: 520px;
@@ -120,6 +144,43 @@ a { color: var(--indigo); }
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 16px;
+}
+
+/* ---------- Level progress blocks ---------- */
+.level-progress-block {
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.level-progress-block:last-child {
+  padding-bottom: 0;
+  margin-bottom: 0;
+  border-bottom: none;
+}
+.level-progress-heading {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--indigo);
+  margin: 0 0 8px;
+  letter-spacing: 0.04em;
+}
+
+/* ---------- Advancement suggestion ---------- */
+.advance-block {
+  padding: 10px 0;
+  font-size: 0.88rem;
+  color: var(--ink);
+}
+.advance-block:not(:last-child) {
+  border-bottom: 1px dashed var(--border);
+  margin-bottom: 4px;
+}
+.advance-block p {
+  margin: 0 0 8px;
+}
+.advance-ready p {
+  color: var(--green);
+  font-weight: 700;
 }
 
 /* ---------- Progress bars ---------- */

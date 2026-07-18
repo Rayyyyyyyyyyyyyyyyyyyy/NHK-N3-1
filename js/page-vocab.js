@@ -13,11 +13,13 @@ const VocabPage = {
 
 async function renderVocab(root) {
   VocabPage.root = root;
-  const vocab = await DataStore.loadVocab();
+  const level = Store.state.level;
+  const vocab = await DataStore.loadVocab(level);
   VocabPage.vocab = vocab;
+  VocabPage.level = level;
 
   root.innerHTML = `
-    <h2 class="page-title">單字</h2>
+    <h2 class="page-title">單字 <span style="font-size:0.85rem;color:var(--indigo);">${LEVEL_LABEL[level]}</span></h2>
     <p class="meta-row"><span>已掌握 <b id="vocab-known-count"></b> ／ ${vocab.length}</span></p>
     <div class="mode-toggle">
       <button id="mode-flashcard" class="${VocabPage.mode === 'flashcard' ? 'active' : ''}">翻卡記憶</button>
@@ -37,6 +39,11 @@ async function renderVocab(root) {
     renderVocab(root);
   });
 
+  if (vocab.length === 0) {
+    document.getElementById('vocab-body').innerHTML = `<div class="card"><p>此等級單字資料載入失敗，請稍後再試。</p></div>`;
+    return;
+  }
+
   if (VocabPage.mode === 'flashcard') {
     if (VocabPage.fcDeck.length === 0) drawFlashcardDeck();
     renderFlashcardView();
@@ -48,14 +55,15 @@ async function renderVocab(root) {
 
 function updateVocabKnownCount() {
   const el = document.getElementById('vocab-known-count');
-  if (el) el.textContent = Object.keys(Store.state.vKnown).length;
+  if (el) el.textContent = Object.keys(Store.state.vKnown[Store.state.level]).length;
 }
 
 function drawFlashcardDeck() {
+  const level = Store.state.level;
   const vocab = VocabPage.vocab;
-  const learningWords = Object.keys(Store.state.vLearning).filter(w => vocab.some(v => v.w === w));
-  const knownSet = new Set(Object.keys(Store.state.vKnown));
-  const learningSet = new Set(Object.keys(Store.state.vLearning));
+  const learningWords = Object.keys(Store.state.vLearning[level]).filter(w => vocab.some(v => v.w === w));
+  const knownSet = new Set(Object.keys(Store.state.vKnown[level]));
+  const learningSet = new Set(Object.keys(Store.state.vLearning[level]));
 
   let deckWords = shuffle(learningWords).slice(0, 10);
   if (deckWords.length < 10) {
@@ -161,7 +169,7 @@ function renderFlashcardView() {
 
     body.querySelector('#fc-learning').addEventListener('click', (e) => {
       e.stopPropagation();
-      Store.markVocabLearning(item.w);
+      Store.markVocabLearning(Store.state.level, item.w);
       updateVocabKnownCount();
       VocabPage.fcIndex++;
       VocabPage.fcFlipped = false;
@@ -169,7 +177,7 @@ function renderFlashcardView() {
     });
     body.querySelector('#fc-known').addEventListener('click', (e) => {
       e.stopPropagation();
-      Store.markVocabKnown(item.w);
+      Store.markVocabKnown(Store.state.level, item.w);
       updateVocabKnownCount();
       VocabPage.fcIndex++;
       VocabPage.fcFlipped = false;
@@ -239,13 +247,13 @@ function renderQuizView() {
           <b>${escapeHtml(item.w)}</b>（${escapeHtml(item.r)}）：${escapeHtml(item.zh || item.en || '')}
         </div>
         <div class="btn-row" style="margin-top:12px;">
-          ${!Store.state.vKnown[item.w] ? `<button class="btn btn-outline" id="quiz-mark-known">標為已掌握</button>` : ''}
+          ${!Store.state.vKnown[Store.state.level][item.w] ? `<button class="btn btn-outline" id="quiz-mark-known">標為已掌握</button>` : ''}
           <button class="btn" id="quiz-next">下一題</button>
         </div>
       `;
       const markBtn = exp.querySelector('#quiz-mark-known');
       if (markBtn) markBtn.addEventListener('click', () => {
-        Store.markVocabKnown(item.w);
+        Store.markVocabKnown(Store.state.level, item.w);
         updateVocabKnownCount();
         markBtn.remove();
       });

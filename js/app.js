@@ -19,6 +19,36 @@ function updateNavActive(page) {
   });
 }
 
+function updateLevelPills() {
+  document.querySelectorAll('.level-pill').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.level === Store.state.level);
+  });
+}
+
+function resetPageStateForLevelChange() {
+  if (typeof VocabPage !== 'undefined') {
+    VocabPage.fcDeck = [];
+    VocabPage.fcIndex = 0;
+    VocabPage.fcFlipped = false;
+    VocabPage.quizCurrent = null;
+    VocabPage.quizStreak = 0;
+  }
+  if (typeof GrammarPage !== 'undefined') {
+    GrammarPage.queue = [];
+    GrammarPage.pointer = 0;
+  }
+  if (typeof ReadingPage !== 'undefined') {
+    ReadingPage.view = 'list';
+    ReadingPage.currentId = null;
+    ReadingPage.answers = {};
+    ReadingPage.optionsCache = null;
+  }
+  if (typeof ListeningPage !== 'undefined') {
+    ListeningPage.answers = {};
+    ListeningPage.optionsCache = {};
+  }
+}
+
 async function navigate(page) {
   if (!PAGES[page]) page = 'home';
   if (currentPage === 'listening' && page !== 'listening') {
@@ -40,9 +70,21 @@ document.addEventListener('DOMContentLoaded', () => {
   Store.load();
   Store.touchStreak();
   updateStreakDisplay();
+  updateLevelPills();
 
   document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.addEventListener('click', () => navigate(btn.dataset.page));
+  });
+
+  document.querySelectorAll('.level-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.level === Store.state.level) return;
+      if (currentPage === 'listening') stopListeningTTS();
+      Store.setLevel(btn.dataset.level);
+      updateLevelPills();
+      resetPageStateForLevelChange();
+      navigate(currentPage);
+    });
   });
 
   document.addEventListener('visibilitychange', () => {

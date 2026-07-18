@@ -6,8 +6,10 @@ const ReadingPage = {
 };
 
 async function renderReading(root) {
-  const articles = await DataStore.loadReading();
+  const level = Store.state.level;
+  const articles = await DataStore.loadReading(level);
   ReadingPage.articles = articles;
+  ReadingPage.level = level;
   ReadingPage.root = root;
 
   if (ReadingPage.view === 'detail' && ReadingPage.currentId) {
@@ -19,18 +21,19 @@ async function renderReading(root) {
 
 function renderReadingList(root) {
   const articles = ReadingPage.articles;
+  const level = ReadingPage.level;
   root.innerHTML = `
-    <h2 class="page-title">讀解</h2>
+    <h2 class="page-title">讀解 <span style="font-size:0.85rem;color:var(--indigo);">${LEVEL_LABEL[level]}</span></h2>
     <div class="card" style="padding:4px 16px;">
-      ${articles.map(a => `
+      ${articles.length ? articles.map(a => `
         <a href="#" class="reading-list-item" data-id="${a.id}">
           <span>
             <span class="rli-title">${escapeHtml(a.title)}</span><br>
             <span class="rli-type">${escapeHtml(a.type)}</span>
           </span>
-          <span class="rli-check">${Store.state.rDone.includes(a.id) ? '✓' : ''}</span>
+          <span class="rli-check">${Store.state.rDone[level].includes(a.id) ? '✓' : ''}</span>
         </a>
-      `).join('')}
+      `).join('') : '<p style="padding:12px 0;color:#8892a0;">此等級目前尚無文章。</p>'}
     </div>
 
     <section class="card ext-link-card">
@@ -130,7 +133,7 @@ function checkReadingComplete(article, root) {
 
   const correctCount = Object.values(ReadingPage.answers).filter(Boolean).length;
   const allCorrect = correctCount === total;
-  if (allCorrect) Store.markReadingDone(article.id);
+  if (allCorrect) Store.markReadingDone(ReadingPage.level, article.id);
 
   const summary = root.querySelector('#reading-summary');
   summary.innerHTML = `

@@ -1,18 +1,24 @@
 async function renderHome(root) {
-  const vocab = await DataStore.loadVocab();
-  const grammar = await DataStore.loadGrammar();
-  const reading = await DataStore.loadReading();
-  const listening = await DataStore.loadListening();
+  const [vocabN3, vocabN2, vocabN1] = await Promise.all([
+    DataStore.loadVocab('n3'), DataStore.loadVocab('n2'), DataStore.loadVocab('n1')
+  ]);
+  const [grammarN3, grammarN2, grammarN1] = await Promise.all([
+    DataStore.loadGrammar('n3'), DataStore.loadGrammar('n2'), DataStore.loadGrammar('n1')
+  ]);
+  const [readingN3, readingN2, readingN1] = await Promise.all([
+    DataStore.loadReading('n3'), DataStore.loadReading('n2'), DataStore.loadReading('n1')
+  ]);
+  const [listeningN3, listeningN2, listeningN1] = await Promise.all([
+    DataStore.loadListening('n3'), DataStore.loadListening('n2'), DataStore.loadListening('n1')
+  ]);
+
   const s = Store.state;
 
-  const vKnownCount = Object.keys(s.vKnown).length;
-  const vTotal = vocab.length;
-  const gCount = s.gDone.length;
-  const gTotal = grammar.length;
-  const rCount = s.rDone.length;
-  const rTotal = reading.length;
-  const lCount = s.lCorrect.length;
-  const lTotal = listening.length;
+  const levels = {
+    n3: { vocab: vocabN3, grammar: grammarN3, reading: readingN3, listening: listeningN3 },
+    n2: { vocab: vocabN2, grammar: grammarN2, reading: readingN2, listening: listeningN2 },
+    n1: { vocab: vocabN1, grammar: grammarN1, reading: readingN1, listening: listeningN1 }
+  };
 
   function bar(label, count, total) {
     const pct = total ? Math.round((count / total) * 100) : 0;
@@ -23,15 +29,69 @@ async function renderHome(root) {
       </div>`;
   }
 
+  function levelProgressBlock(level) {
+    const d = levels[level];
+    const vKnownCount = Object.keys(s.vKnown[level]).length;
+    const gCount = s.gDone[level].length;
+    const rCount = s.rDone[level].length;
+    const lCount = s.lCorrect[level].length;
+    return `
+      <div class="level-progress-block">
+        <p class="level-progress-heading">${LEVEL_LABEL[level]}</p>
+        ${bar('單字', vKnownCount, d.vocab.length)}
+        ${bar('文法', gCount, d.grammar.length)}
+        ${bar('讀解', rCount, d.reading.length)}
+        ${bar('聽力', lCount, d.listening.length)}
+      </div>`;
+  }
+
+  // advancement suggestion: N3 -> N2
+  const gDoneN3 = s.gDone.n3.length;
+  const gTotalN3 = grammarN3.length;
+  const vKnownN3 = Object.keys(s.vKnown.n3).length;
+  const VOCAB_GOAL_N3 = 300;
+  const n3Ready = gDoneN3 >= gTotalN3 && vKnownN3 >= VOCAB_GOAL_N3;
+
+  // advancement suggestion: N2 -> N1
+  const gDoneN2 = s.gDone.n2.length;
+  const gTotalN2 = grammarN2.length;
+  const vKnownN2 = Object.keys(s.vKnown.n2).length;
+  const VOCAB_GOAL_N2 = 600;
+  const n2Ready = gDoneN2 >= gTotalN2 && vKnownN2 >= VOCAB_GOAL_N2;
+
+  function advanceCard(fromLabel, toLabel, toLevel, ready, gDone, gTotal, vKnown, vGoal) {
+    if (ready) {
+      return `
+        <div class="advance-block advance-ready">
+          <p>🎉 ${fromLabel} 基礎穩固，可以進入 ${toLabel} 修煉！</p>
+          <button class="btn btn-block advance-switch-btn" data-level="${toLevel}">切換到 ${toLabel}</button>
+        </div>`;
+    }
+    const gGap = Math.max(0, gTotal - gDone);
+    const vGap = Math.max(0, vGoal - vKnown);
+    const gaps = [];
+    if (gGap > 0) gaps.push(`文法還差 ${gGap} 題`);
+    if (vGap > 0) gaps.push(`單字還差 ${vGap} 字`);
+    return `
+      <div class="advance-block">
+        <p>${fromLabel} 進階門檻：${gaps.join('、')}</p>
+      </div>`;
+  }
+
   root.innerHTML = `
     <h2 class="page-title">首頁</h2>
 
     <section class="card">
       <p class="card-title">整體進度</p>
-      ${bar('單字', vKnownCount, vTotal)}
-      ${bar('文法', gCount, gTotal)}
-      ${bar('讀解', rCount, rTotal)}
-      ${bar('聽力', lCount, lTotal)}
+      ${levelProgressBlock('n3')}
+      ${levelProgressBlock('n2')}
+      ${levelProgressBlock('n1')}
+    </section>
+
+    <section class="card">
+      <p class="card-title">進階建議</p>
+      ${advanceCard('N3', 'N2', 'n2', n3Ready, gDoneN3, gTotalN3, vKnownN3, VOCAB_GOAL_N3)}
+      ${advanceCard('N2', 'N1', 'n1', n2Ready, gDoneN2, gTotalN2, vKnownN2, VOCAB_GOAL_N2)}
     </section>
 
     <section class="card">
@@ -64,6 +124,17 @@ async function renderHome(root) {
     </section>
   `;
 
+  root.querySelectorAll('.advance-switch-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetLevel = btn.dataset.level;
+      if (currentPage === 'listening') stopListeningTTS();
+      Store.setLevel(targetLevel);
+      updateLevelPills();
+      resetPageStateForLevelChange();
+      navigate('home');
+    });
+  });
+
   root.querySelector('#btn-export').addEventListener('click', () => {
     const code = Store.exportCode();
     const ta = root.querySelector('#progress-code');
@@ -89,8 +160,8 @@ async function renderHome(root) {
     }
     try {
       Store.importCode(code);
-      setStatus('✓ 進度已還原！', 'ok');
       updateStreakDisplay();
+      updateLevelPills();
       await renderHome(root);
       root.querySelector('#progress-status').textContent = '✓ 進度已還原！';
       root.querySelector('#progress-status').className = 'status-msg ok';
