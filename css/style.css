@@ -81,7 +81,7 @@ a { color: var(--indigo); }
 .level-pills {
   position: relative;
   display: flex;
-  gap: 8px;
+  gap: 6px;
   margin-top: 14px;
 }
 .level-pill {
@@ -92,10 +92,10 @@ a { color: var(--indigo); }
   background: transparent;
   color: #fff;
   font-family: var(--font-serif);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
 }
 .level-pill.active {
   background: #fff;
@@ -163,6 +163,18 @@ a { color: var(--indigo); }
   color: var(--indigo);
   margin: 0 0 8px;
   letter-spacing: 0.04em;
+}
+.level-current-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: var(--indigo);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  vertical-align: 1px;
 }
 
 /* ---------- Advancement suggestion ---------- */

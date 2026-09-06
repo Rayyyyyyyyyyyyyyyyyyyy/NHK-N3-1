@@ -1,24 +1,24 @@
+// 每個等級進階到下一級的建議門檻：該級文法全部掌握，且單字掌握達標
+const ADVANCE_RULES = {
+  n5: { next: 'n4', vocabGoal: 150 },
+  n4: { next: 'n3', vocabGoal: 250 },
+  n3: { next: 'n2', vocabGoal: 300 },
+  n2: { next: 'n1', vocabGoal: 600 }
+};
+
 async function renderHome(root) {
-  const [vocabN3, vocabN2, vocabN1] = await Promise.all([
-    DataStore.loadVocab('n3'), DataStore.loadVocab('n2'), DataStore.loadVocab('n1')
-  ]);
-  const [grammarN3, grammarN2, grammarN1] = await Promise.all([
-    DataStore.loadGrammar('n3'), DataStore.loadGrammar('n2'), DataStore.loadGrammar('n1')
-  ]);
-  const [readingN3, readingN2, readingN1] = await Promise.all([
-    DataStore.loadReading('n3'), DataStore.loadReading('n2'), DataStore.loadReading('n1')
-  ]);
-  const [listeningN3, listeningN2, listeningN1] = await Promise.all([
-    DataStore.loadListening('n3'), DataStore.loadListening('n2'), DataStore.loadListening('n1')
-  ]);
+  const levelData = {};
+  await Promise.all(LEVELS.map(async lv => {
+    const [vocab, grammar, reading, listening] = await Promise.all([
+      DataStore.loadVocab(lv),
+      DataStore.loadGrammar(lv),
+      DataStore.loadReading(lv),
+      DataStore.loadListening(lv)
+    ]);
+    levelData[lv] = { vocab, grammar, reading, listening };
+  }));
 
   const s = Store.state;
-
-  const levels = {
-    n3: { vocab: vocabN3, grammar: grammarN3, reading: readingN3, listening: listeningN3 },
-    n2: { vocab: vocabN2, grammar: grammarN2, reading: readingN2, listening: listeningN2 },
-    n1: { vocab: vocabN1, grammar: grammarN1, reading: readingN1, listening: listeningN1 }
-  };
 
   function bar(label, count, total) {
     const pct = total ? Math.round((count / total) * 100) : 0;
@@ -30,68 +30,76 @@ async function renderHome(root) {
   }
 
   function levelProgressBlock(level) {
-    const d = levels[level];
-    const vKnownCount = Object.keys(s.vKnown[level]).length;
-    const gCount = s.gDone[level].length;
-    const rCount = s.rDone[level].length;
-    const lCount = s.lCorrect[level].length;
+    const d = levelData[level];
+    const isCurrent = level === s.level;
     return `
       <div class="level-progress-block">
-        <p class="level-progress-heading">${LEVEL_LABEL[level]}</p>
-        ${bar('單字', vKnownCount, d.vocab.length)}
-        ${bar('文法', gCount, d.grammar.length)}
-        ${bar('讀解', rCount, d.reading.length)}
-        ${bar('聽力', lCount, d.listening.length)}
+        <p class="level-progress-heading">
+          ${LEVEL_LABEL[level]}${isCurrent ? '<span class="level-current-badge">修煉中</span>' : ''}
+        </p>
+        ${bar('單字', Object.keys(s.vKnown[level]).length, d.vocab.length)}
+        ${bar('文法', s.gDone[level].length, d.grammar.length)}
+        ${bar('讀解', s.rDone[level].length, d.reading.length)}
+        ${bar('聽力', s.lCorrect[level].length, d.listening.length)}
       </div>`;
   }
 
-  // advancement suggestion: N3 -> N2
-  const gDoneN3 = s.gDone.n3.length;
-  const gTotalN3 = grammarN3.length;
-  const vKnownN3 = Object.keys(s.vKnown.n3).length;
-  const VOCAB_GOAL_N3 = 300;
-  const n3Ready = gDoneN3 >= gTotalN3 && vKnownN3 >= VOCAB_GOAL_N3;
+  function advanceStatus(level) {
+    const rule = ADVANCE_RULES[level];
+    if (!rule) return null;
+    const gDone = s.gDone[level].length;
+    const gTotal = levelData[level].grammar.length;
+    const vKnown = Object.keys(s.vKnown[level]).length;
+    return {
+      next: rule.next,
+      ready: gDone >= gTotal && vKnown >= rule.vocabGoal,
+      gGap: Math.max(0, gTotal - gDone),
+      vGap: Math.max(0, rule.vocabGoal - vKnown)
+    };
+  }
 
-  // advancement suggestion: N2 -> N1
-  const gDoneN2 = s.gDone.n2.length;
-  const gTotalN2 = grammarN2.length;
-  const vKnownN2 = Object.keys(s.vKnown.n2).length;
-  const VOCAB_GOAL_N2 = 600;
-  const n2Ready = gDoneN2 >= gTotalN2 && vKnownN2 >= VOCAB_GOAL_N2;
-
-  function advanceCard(fromLabel, toLabel, toLevel, ready, gDone, gTotal, vKnown, vGoal) {
-    if (ready) {
+  function advanceBlock(level) {
+    const st = advanceStatus(level);
+    if (!st) return '';
+    const from = LEVEL_LABEL[level];
+    const to = LEVEL_LABEL[st.next];
+    if (st.ready) {
       return `
         <div class="advance-block advance-ready">
-          <p>🎉 ${fromLabel} 基礎穩固，可以進入 ${toLabel} 修煉！</p>
-          <button class="btn btn-block advance-switch-btn" data-level="${toLevel}">切換到 ${toLabel}</button>
+          <p>🎉 ${from} 基礎穩固，可以進入 ${to} 修煉！</p>
+          <button class="btn btn-block advance-switch-btn" data-level="${st.next}">切換到 ${to}</button>
         </div>`;
     }
-    const gGap = Math.max(0, gTotal - gDone);
-    const vGap = Math.max(0, vGoal - vKnown);
     const gaps = [];
-    if (gGap > 0) gaps.push(`文法還差 ${gGap} 題`);
-    if (vGap > 0) gaps.push(`單字還差 ${vGap} 字`);
+    if (st.gGap > 0) gaps.push(`文法還差 ${st.gGap} 題`);
+    if (st.vGap > 0) gaps.push(`單字還差 ${st.vGap} 字`);
     return `
       <div class="advance-block">
-        <p>${fromLabel} 進階門檻：${gaps.join('、')}</p>
+        <p>${from} 進階門檻：${gaps.join('、')}</p>
       </div>`;
   }
+
+  // 只顯示「目前等級」與「已達標可進階」的建議，避免五個等級全列出來太雜
+  const advanceLevels = LEVELS.filter(lv => {
+    const st = advanceStatus(lv);
+    if (!st) return false;
+    return lv === s.level || st.ready;
+  });
+  const advanceHtml = advanceLevels.length
+    ? advanceLevels.map(advanceBlock).join('')
+    : `<div class="advance-block"><p>目前在 ${LEVEL_LABEL[s.level]}，已是最高等級，繼續保持！</p></div>`;
 
   root.innerHTML = `
     <h2 class="page-title">首頁</h2>
 
     <section class="card">
       <p class="card-title">整體進度</p>
-      ${levelProgressBlock('n3')}
-      ${levelProgressBlock('n2')}
-      ${levelProgressBlock('n1')}
+      ${LEVELS.map(levelProgressBlock).join('')}
     </section>
 
     <section class="card">
       <p class="card-title">進階建議</p>
-      ${advanceCard('N3', 'N2', 'n2', n3Ready, gDoneN3, gTotalN3, vKnownN3, VOCAB_GOAL_N3)}
-      ${advanceCard('N2', 'N1', 'n1', n2Ready, gDoneN2, gTotalN2, vKnownN2, VOCAB_GOAL_N2)}
+      ${advanceHtml}
     </section>
 
     <section class="card">
@@ -117,6 +125,7 @@ async function renderHome(root) {
 
     <section class="card">
       <p class="card-title">備考路線</p>
+      <p class="route-step"><b>N5・N4 打底：</b>把該級文法刷到全綠，單字每天 10 個新字，先建立語感</p>
       <p class="route-step"><b>第 1～3 個月：</b>文法 30 題刷到全綠、單字每天 10 個新字</p>
       <p class="route-step"><b>第 4～6 個月：</b>每天一篇 NHK 新聞，開始《新完全マスター読解 N2》</p>
       <p class="route-step"><b>第 7 個月起：</b>做 N2 模擬題，穩定 7 成後混入 N1 教材</p>
@@ -126,9 +135,8 @@ async function renderHome(root) {
 
   root.querySelectorAll('.advance-switch-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      const targetLevel = btn.dataset.level;
       if (currentPage === 'listening') stopListeningTTS();
-      Store.setLevel(targetLevel);
+      Store.setLevel(btn.dataset.level);
       updateLevelPills();
       resetPageStateForLevelChange();
       navigate('home');

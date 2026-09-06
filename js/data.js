@@ -1,6 +1,12 @@
+function emptyLevelCache() {
+  const o = {};
+  LEVELS.forEach(lv => { o[lv] = null; });
+  return o;
+}
+
 const DataStore = {
-  vocab: { n3: null, n2: null, n1: null },
-  grammar: { n3: null, n2: null, n1: null },
+  vocab: emptyLevelCache(),
+  grammar: emptyLevelCache(),
   reading: null,
   listening: null,
 
@@ -71,4 +77,4 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
-const LEVEL_LABEL = { n3: 'N3', n2: 'N2', n1: 'N1' };
+const LEVEL_LABEL = { n5: 'N5', n4: 'N4', n3: 'N3', n2: 'N2', n1: 'N1' };

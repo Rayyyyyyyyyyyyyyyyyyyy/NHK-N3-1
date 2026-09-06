@@ -1,6 +1,6 @@
 const STORAGE_KEY = 'nihongo_dojo_v3';
 const LEGACY_STORAGE_KEY = 'nihongo_dojo_v2';
-const LEVELS = ['n3', 'n2', 'n1'];
+const LEVELS = ['n5', 'n4', 'n3', 'n2', 'n1'];
 
 const LEGACY_READING_LEVELS = { r1: 'n3', r2: 'n2', r3: 'n2' };
 const LEGACY_LISTENING_LEVELS = {
@@ -25,7 +25,7 @@ function defaultState() {
   return {
     streak: 0,
     lastDate: '',
-    level: 'n3',
+    level: 'n5',
     vKnown: emptyLevelMap('object'),
     vLearning: emptyLevelMap('object'),
     gDone: emptyLevelMap('array'),
@@ -35,15 +35,19 @@ function defaultState() {
   };
 }
 
-function isLegacyShape(parsed) {
+// v2 的進度是「不分級」的扁平結構（gDone 為索引陣列、vKnown 的值為 true）；
+// 分級後的結構則是以等級為鍵的物件。用這個差異判斷，才不會把只存了部分等級的
+// 分級資料誤判成舊版而破壞進度。
+function isLegacyV2Shape(parsed) {
   if (!parsed || typeof parsed !== 'object') return false;
-  if (parsed.level && LEVELS.includes(parsed.level) && parsed.vKnown && LEVELS.every(lv => lv in parsed.vKnown)) {
-    return false; // already v3 shape
+  if (Array.isArray(parsed.gDone)) return true;
+  if (parsed.vKnown && typeof parsed.vKnown === 'object') {
+    return Object.values(parsed.vKnown).some(v => typeof v !== 'object' || v === null);
   }
-  return true;
+  return false;
 }
 
-function migrateLegacyToV3(legacy) {
+function migrateLegacyV2(legacy) {
   const s = defaultState();
   s.streak = legacy.streak || 0;
   s.lastDate = legacy.lastDate || '';
@@ -90,7 +94,7 @@ function normalizeState(parsed) {
     merged.lCorrect[lv] = ((parsed.lCorrect && parsed.lCorrect[lv]) || []).slice();
     merged.rDone[lv] = ((parsed.rDone && parsed.rDone[lv]) || []).slice();
   });
-  if (!LEVELS.includes(merged.level)) merged.level = 'n3';
+  if (!LEVELS.includes(merged.level)) merged.level = 'n5';
   return merged;
 }
 
@@ -126,7 +130,7 @@ const Store = {
     if (legacyRaw) {
       try {
         const legacyParsed = JSON.parse(legacyRaw);
-        this.state = isLegacyShape(legacyParsed) ? migrateLegacyToV3(legacyParsed) : normalizeState(legacyParsed);
+        this.state = isLegacyV2Shape(legacyParsed) ? migrateLegacyV2(legacyParsed) : normalizeState(legacyParsed);
         this.save();
         return this.state;
       } catch (e) {
@@ -221,7 +225,7 @@ const Store = {
     const json = decodeURIComponent(atob(code.trim()));
     const parsed = JSON.parse(json);
     if (typeof parsed !== 'object' || parsed === null) throw new Error('invalid');
-    this.state = isLegacyShape(parsed) ? migrateLegacyToV3(parsed) : normalizeState(parsed);
+    this.state = isLegacyV2Shape(parsed) ? migrateLegacyV2(parsed) : normalizeState(parsed);
     this.save();
   }
 };
