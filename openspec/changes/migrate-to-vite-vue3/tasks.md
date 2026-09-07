@@ -7,31 +7,28 @@
 - [ ] 1.5 建立 `npm run check` 統一入口:型別檢查 + 測試(build-and-deploy 規格要求可單一指令執行)
 - [ ] 1.6 把 `data/*.json` 移到 `public/data/`,確認建置後不進 bundle(question-bank-access 規格)
 
-## 2. 凍結 gDone 對照表(必須早於任何進度邏輯)
+## 2. 文法題穩定 id
 
-- [ ] 2.1 寫腳本為 `public/data/grammar-<level>.json` 每題新增 `id`,格式 `g-<level>-<三位序號>`,依**當前**順序產生
-- [ ] 2.2 產生 `src/domain/progress/gdoneMigrationTable.ts`:各等級的「v3 索引 → id」靜態陣列,**提交進版本庫**
-- [ ] 2.3 在檔案標頭註明此表為 v3 時代的歷史紀錄,MUST NOT 重新產生、MUST NOT 隨題庫改版更新
-- [ ] 2.4 擴充資料檢查腳本:驗證各等級 id 唯一、且與對照表長度一致
+- [ ] 2.1 寫腳本為 `public/data/grammar-<level>.json` 每題新增 `id`,格式 `g-<level>-<三位序號>`
+- [ ] 2.2 擴充資料檢查腳本:驗證各等級 id 存在且唯一(build-and-deploy 規格)
 
 ## 3. 純邏輯移植(先寫測試,後寫實作)
 
 - [ ] 3.1 定義 `ProgressState` 等型別,六個進度欄位 × 五等級的形狀由型別強制
-- [ ] 3.2 把 archive 分支 `tools/test-storage.mjs` 的 7 個案例改寫為 Vitest,先讓它們紅
-- [ ] 3.3 移植 `normalizeState()` / `migrateLegacyV2()` / `isDojoStateShape()` / 進度碼編解碼到 `src/domain/progress/`,零 Vue 與零 localStorage 相依(D3)
-- [ ] 3.4 確認 3.2 的 7 個案例全綠——這是「行為等價」的證明(D7)
-- [ ] 3.5 實作 v3 → v4 遷移:依凍結對照表把 `gDone` 索引轉為 id,查無對應者丟棄
-- [ ] 3.6 測試:v3 樣本資料遷移後 id 正確、超出範圍的索引被丟棄且不影響其他進度
-- [ ] 3.7 測試:遷移後即使題庫順序改變,已掌握的題目仍維持已掌握(grammar-drill 規格的核心保證)
-- [ ] 3.8 實作有界撤銷堆疊:匯入與撤銷**兩者**在覆寫前都先保存當前狀態
-- [ ] 3.9 測試:匯入後撤銷、撤銷後再撤銷、連續兩次匯入三種情境(progress-persistence 規格)
+- [ ] 3.2 把 archive 分支 `tools/test-storage.mjs` 中**與版本遷移無關**的案例改寫為 Vitest,先讓它們紅
+- [ ] 3.3 移植 `normalizeState()` / `isDojoStateShape()` / 進度碼編解碼到 `src/domain/progress/`,零 Vue 與零 localStorage 相依(D3)。**不移植** `migrateLegacyV2()`
+- [ ] 3.4 確認 3.2 全綠——這是「行為等價」的證明(D7)
+- [ ] 3.5 測試:舊版格式的進度碼被明確拒絕,且不部分套用(progress-persistence 規格)
+- [ ] 3.6 測試:同版本進度碼匯出後匯入,六欄位 × 五等級與等級、連續天數皆完全一致
+- [ ] 3.7 實作有界撤銷堆疊:匯入與撤銷**兩者**在覆寫前都先保存當前狀態
+- [ ] 3.8 測試:匯入後撤銷、撤銷後再撤銷、連續兩次匯入三種情境(progress-persistence 規格)
 
 ## 4. 持久化層與 Pinia store
 
 - [ ] 4.1 `progressStorage` 薄層:包 try/catch 的 localStorage 讀寫,拋錯時安全降級
 - [ ] 4.2 測試:localStorage 讀寫刪全部拋錯時仍回傳完整預設狀態、且回報無可撤銷備份
-- [ ] 4.3 `useProgressStore`:初始化時讀原始字串 → 走遷移 → 得 canonical state;寫入 `nihongo_dojo_v4`
-- [ ] 4.4 確認 `nihongo_dojo_v3` **不被刪除**(回滾安全網,D9 Migration Plan)
+- [ ] 4.3 `useProgressStore`:初始化時讀原始字串 → `normalize()` → canonical state;使用新的儲存 key,**不讀取舊版 key**(D4)
+- [ ] 4.4 測試:瀏覽器中存在舊版資料時,新版以空白預設進度啟動
 - [ ] 4.5 store 的 mark 類 action(單字掌握/待複習、文法對錯、讀解完成、聽力作答)與連續天數更新
 - [ ] 4.6 測試:連續天數的同日/隔日/中斷三種情境
 
@@ -72,12 +69,12 @@
 - [ ] 8.2 workflow 在檢查或建置失敗時中止且不發佈
 - [ ] 8.3 本機以部署用 base path 執行 `vite preview`,確認無資源請求失敗、題庫可取得
 - [ ] 8.4 在分支上驗證部署產物可用**之後**,才合併到 `main`(D8:此前 `main` 不得改變服務方式)
-- [ ] 8.5 首次發佈後以真實瀏覽器確認:既有 `nihongo_dojo_v3` 進度被正確讀取並遷移
+- [ ] 8.5 首次發佈後以真實瀏覽器確認站台可用,且以空白進度正常啟動
 
 ## 9. 架構文件
 
 - [ ] 9.1 建立 `ARCHITECTURE.md`:收錄 proposal 的不變式表與 design 的 D1–D9 結論
-- [ ] 9.2 特別記錄無法從程式碼反推的意圖:等級為何不進 URL、為何刻意不做深色模式、gDone 對照表為何必須凍結
+- [ ] 9.2 特別記錄無法從程式碼反推的意圖:等級為何不進 URL、為何刻意不做深色模式、**舊進度為何刻意不遷移且此為單向門**
 - [ ] 9.3 建立新的 `CLAUDE.md` 提供工作指引並指向 `ARCHITECTURE.md`,不重複內容;不記錄已由型別強制的事實
 - [ ] 9.4 更新 `README.md`:開發與建置指令、部署方式、儲存與遷移說明
 
@@ -85,7 +82,6 @@
 
 - [ ] 10.1 `npm run check` 全綠(型別檢查 + 全部測試)
 - [ ] 10.2 與既有部署版本並排比對五個分頁,確認配色、字體、間距、版面一致(app-shell-navigation 規格的驗收手段)
-- [ ] 10.3 以真實 v3 資料驗證遷移:文法進度筆數不變、對應到正確題目
-- [ ] 10.4 手動驗收破壞性路徑:誤貼非進度碼、匯入後撤銷、撤銷後再撤銷、連續兩次匯入
-- [ ] 10.5 手動驗收降級路徑:題庫請求失敗時首頁仍完整、匯出入口仍可用
-- [ ] 10.6 完成報告列出未驗證邊界:回滾僅能回到遷移當下的進度、備份與 localStorage 同生命週期
+- [ ] 10.3 手動驗收破壞性路徑:誤貼非進度碼、匯入後撤銷、撤銷後再撤銷、連續兩次匯入
+- [ ] 10.4 手動驗收降級路徑:題庫請求失敗時首頁仍完整、匯出入口仍可用
+- [ ] 10.5 完成報告列出未驗證邊界:進度重置為單向門、備份與 localStorage 同生命週期

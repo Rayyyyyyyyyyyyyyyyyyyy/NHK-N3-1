@@ -1,75 +1,32 @@
 ## ADDED Requirements
 
-### Requirement: 既有使用者的進度必須跨遷移存活
+### Requirement: 舊版資料必須被忽略而非部分讀取
 
-系統 MUST 能讀取已部署版本寫入的 `nihongo_dojo_v3` 資料,並在不遺失任何進度的前提下轉為新的正規狀態。使用者不應察覺遷移發生。
+新版 MUST NOT 嘗試讀取或轉換舊版本寫入的儲存內容。部分讀取比完全不讀更危險——它會產生看似正常但實際殘缺的狀態。
 
-#### Scenario: 讀取既有 v3 資料
+此為刻意的單向決定:唯一的使用者已同意重置既有進度。
 
-- **WHEN** 瀏覽器中存在 `nihongo_dojo_v3` 且格式合法
-- **THEN** 系統 MUST 載入其全部六個進度欄位 × 五個等級的內容
-- **AND** `streak`、`lastDate`、`level` MUST 保持原值
+#### Scenario: 瀏覽器中存在舊版資料
 
-#### Scenario: 讀取更舊的 v2 不分級資料
+- **WHEN** 使用者以既有的瀏覽器開啟新版
+- **THEN** 系統 MUST 以空白的預設進度啟動
+- **AND** MUST NOT 讀取或轉換任何舊版本的儲存內容
 
-- **WHEN** 不存在 `nihongo_dojo_v3` 但存在 `nihongo_dojo_v2`(分級化之前的扁平結構)
-- **THEN** 系統 MUST 將其遷移到 N2 的對應欄位
-- **AND** 讀解與聽力的既有 id MUST 依既有對照歸入正確等級
+#### Scenario: 貼上舊版產生的進度碼
 
-#### Scenario: 完全沒有既有資料
+- **WHEN** 使用者匯入舊版本匯出的進度碼
+- **THEN** 系統 MUST 明確拒絕並說明該格式不受支援
+- **AND** MUST NOT 部分套用其內容
 
-- **WHEN** 兩個舊 key 都不存在
-- **THEN** 系統 MUST 產生結構完整的預設狀態,`level` 為 `n5`
+### Requirement: 進度碼必須可在裝置之間往返
 
-### Requirement: 文法進度必須從陣列索引遷移為穩定 id
+進度碼是跨裝置搬移進度的唯一手段。匯出再匯入 MUST 得到完全相同的進度。
 
-`gDone` 在 v3 存的是題目在陣列中的索引;v4 改存穩定 id。遷移 MUST 使用**凍結於程式碼中的靜態對照表**,MUST NOT 在執行時從當下的題庫檔案推導順序。
+#### Scenario: 匯出後匯入
 
-遷移執行的時間點是使用者下次開啟 App,屆時題庫可能已改版多次;依當下順序推導會把進度標到錯誤的題目上,比清空更難察覺。
-
-#### Scenario: 索引依凍結對照表轉為 id
-
-- **WHEN** v3 資料中某等級的 `gDone` 為 `[0, 3, 7]`
-- **THEN** 系統 MUST 依該等級的凍結對照表,將其轉為對應位置的三個 id
-- **AND** 轉換結果 MUST NOT 受目前 `data/grammar-*.json` 的實際內容或順序影響
-
-#### Scenario: 索引在對照表中不存在
-
-- **WHEN** v3 資料含有超出凍結對照表範圍的索引
-- **THEN** 系統 MUST 丟棄該筆
-- **AND** MUST NOT 因此中止整體遷移或清空其他進度
-
-#### Scenario: 遷移後題庫改版
-
-- **GIVEN** 使用者的進度已遷移為 id
-- **WHEN** `data/grammar-*.json` 在任意位置新增、刪除或重新排序題目
-- **THEN** 使用者已掌握的題目 MUST 維持已掌握
-- **AND** MUST NOT 發生進度整批位移
-
-### Requirement: 舊版 key 必須保留作為回滾安全網
-
-遷移 MUST NOT 刪除 `nihongo_dojo_v3`。新狀態寫入獨立的 key。
-
-#### Scenario: 遷移完成後的儲存內容
-
-- **WHEN** v3 → v4 遷移完成
-- **THEN** 新狀態 MUST 寫入 `nihongo_dojo_v4`
-- **AND** `nihongo_dojo_v3` MUST 仍然存在且內容未被修改
-
-### Requirement: 進度碼必須跨版本相容
-
-匯出的 base64 進度碼是使用者唯一的跨裝置與長期備份手段。系統 MUST 能匯入舊版本產生的進度碼,並走與 localStorage 相同的遷移路徑。
-
-#### Scenario: 匯入 v3 時代產生的進度碼
-
-- **WHEN** 使用者匯入部署版本匯出的進度碼
-- **THEN** 系統 MUST 接受它並套用相同的版本遷移
-- **AND** 文法進度 MUST 依凍結對照表轉為 id
-
-#### Scenario: 匯出後再匯入
-
-- **WHEN** 使用者匯出進度碼並立即匯入同一份
-- **THEN** 進度 MUST 與匯出當下完全相同
+- **WHEN** 使用者匯出進度碼並在另一裝置匯入
+- **THEN** 兩邊的六個進度欄位 × 五個等級 MUST 完全一致
+- **AND** 目前等級與連續學習天數 MUST 一併還原
 
 ### Requirement: 匯入前必須驗證輸入
 
