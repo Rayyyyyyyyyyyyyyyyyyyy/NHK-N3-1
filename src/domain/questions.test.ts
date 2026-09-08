@@ -1,4 +1,4 @@
-import { it, expect } from 'vitest'
+import { it, expect, vi } from 'vitest'
 import { drawDeck, grammarQueue, quizFor, type Vocab } from './questions'
 const vocab: Vocab[] = Array.from({ length: 30 }, (_, i) => ({
   w: String(i),
@@ -31,4 +31,26 @@ it('quiz readings are four unique readings from the same bank', () => {
   expect(new Set(q.options).size).toBe(4)
   expect(q.options).toContain(q.item.r)
   expect(q.options.every((r) => vocab.some((v) => v.r === r))).toBe(true)
+})
+it.each([
+  ['きゅう', 'く'],
+  ['く', 'きゅう'],
+])('excludes the other reading of 九 when testing %s', (reading, otherReading) => {
+  const bank: Vocab[] = [
+    { w: '九', r: reading, zh: '九', en: 'nine' },
+    { w: '九', r: otherReading, zh: '九', en: 'nine' },
+    { w: '一', r: 'いち', zh: '一', en: 'one' },
+    { w: '二', r: 'に', zh: '二', en: 'two' },
+    { w: '三', r: 'さん', zh: '三', en: 'three' },
+  ]
+  const random = vi.spyOn(Math, 'random').mockReturnValue(0.999).mockReturnValueOnce(0)
+  try {
+    const quiz = quizFor(bank)
+    expect(quiz.item).toEqual(bank[0])
+    expect(quiz.options).not.toContain(otherReading)
+    expect(quiz.options).toHaveLength(4)
+    expect(new Set(quiz.options)).toEqual(new Set([reading, 'いち', 'に', 'さん']))
+  } finally {
+    random.mockRestore()
+  }
 })

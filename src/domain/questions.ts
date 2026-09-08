@@ -64,9 +64,8 @@ export function grammarQueue(items: Grammar[], done: string[]): Grammar[] {
 }
 export function quizFor(items: Vocab[]) {
   const item = items[Math.floor(Math.random() * items.length)]
-  const others = [...new Set(shuffle(items.filter((v) => v.r !== item.r)).map((v) => v.r))].slice(
-    0,
-    3,
-  )
+  const others = [
+    ...new Set(shuffle(items.filter((v) => v.w !== item.w && v.r !== item.r)).map((v) => v.r)),
+  ].slice(0, 3)
   return { item, options: shuffle([item.r, ...others]) }
 }
