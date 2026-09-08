@@ -1,0 +1,35 @@
+{
+  "name": "nihongo-dojo",
+  "version": "4.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "check:data": "node tools/check-data.mjs",
+    "check": "vue-tsc --noEmit && npm run check:data && vitest run",
+    "format": "prettier --write src tools *.ts *.js *.json index.html"
+  },
+  "dependencies": {
+    "@vueuse/core": "^13.9.0",
+    "pinia": "^3.0.4",
+    "vue": "^3.5.42",
+    "vue-router": "^4.6.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "@vitejs/plugin-vue": "^5.2.4",
+    "@vue/test-utils": "^2.5.0",
+    "autoprefixer": "^10.5.5",
+    "happy-dom": "^20.14.0",
+    "postcss": "^8.5.28",
+    "prettier": "^3.9.6",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.3",
+    "vitest": "^3.2.7",
+    "vue-tsc": "^2.2.12"
+  }
+}
