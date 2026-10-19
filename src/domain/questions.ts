@@ -21,7 +21,7 @@ export interface Reading {
   type: string
   text: string
   notes: { term: string; meaning: string }[]
-  questions: Question[]
+  questions: (Question & { id: string })[]
 }
 export interface Listening extends Question {
   id: string
@@ -62,8 +62,8 @@ export function grammarQueue(items: Grammar[], done: string[]): Grammar[] {
     ...shuffle(items.filter((q) => done.includes(q.id))),
   ]
 }
-export function quizFor(items: Vocab[]) {
-  const item = items[Math.floor(Math.random() * items.length)]
+export function quizFor(items: Vocab[], target?: Vocab) {
+  const item = target ?? items[Math.floor(Math.random() * items.length)]
   const others = [
     ...new Set(shuffle(items.filter((v) => v.w !== item.w && v.r !== item.r)).map((v) => v.r)),
   ].slice(0, 3)

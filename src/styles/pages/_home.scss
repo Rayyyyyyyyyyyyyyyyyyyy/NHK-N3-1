@@ -1,0 +1,219 @@
+@use '../abstracts/tokens' as t;
+
+@layer components {
+  .dashboard-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 22px;
+    .page-title {
+      margin: 0;
+    }
+  }
+  .current-level-label {
+    display: none;
+    flex: none;
+    border: 1px solid t.color(border);
+    border-radius: 999px;
+    padding: 8px 12px;
+    font-size: 0.75rem;
+    color: t.color(indigo);
+    @include t.from(small) {
+      display: inline-block;
+    }
+  }
+  .home-dashboard {
+    display: grid;
+    gap: 18px;
+    align-items: start;
+    margin-bottom: 20px;
+    @include t.from(desktop) {
+      gap: 24px;
+    }
+    @include t.from(wide) {
+      grid-template-columns: minmax(0, 1fr) 320px;
+    }
+  }
+  .home-primary,
+  .home-secondary,
+  .home-utilities {
+    display: grid;
+    gap: 18px;
+    align-items: start;
+    min-width: 0;
+    > .card {
+      margin: 0;
+    }
+  }
+  .home-secondary {
+    @include t.from(tablet) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    @include t.from(wide) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  .home-utilities {
+    @include t.from(tablet) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  .review-card .section-heading > .nav-icon {
+    color: t.color(indigo);
+    width: 26px;
+    height: 26px;
+  }
+  .review-links {
+    display: grid;
+    gap: 10px;
+    margin-top: 18px;
+    @include t.from(small) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    @include t.from(desktop) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    @include t.from(wide) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  .review-link {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border: 1px solid t.color(border);
+    border-radius: 10px;
+    padding: 16px 14px;
+    color: t.color(indigo);
+    text-decoration: none;
+    min-width: 0;
+    > span:first-child {
+      flex: 1;
+      min-width: 0;
+    }
+    strong {
+      display: block;
+      font-size: 0.86rem;
+    }
+    small {
+      display: block;
+      margin-top: 5px;
+      font-size: 0.7rem;
+      line-height: 1.6;
+      color: t.color(subtle);
+    }
+    &-count {
+      font-size: 1.5rem;
+      text-align: center;
+      small {
+        margin-top: 0;
+        font-size: 0.65rem;
+      }
+    }
+  }
+  .level-chip {
+    color: t.color(indigo);
+    background: t.color(paper);
+    border: 1px solid t.color(border);
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 7px 10px;
+  }
+  .current-progress-card {
+    .section-description {
+      margin-bottom: 22px;
+    }
+    .progress-row {
+      margin-bottom: 18px;
+    }
+    .progress-track {
+      height: 6px;
+      border: 0;
+      background: t.color(border);
+    }
+  }
+  .progress-denominator {
+    color: t.color(subtle);
+    font-size: 0.72rem;
+  }
+  .progress-footnote,
+  .streak-baseline-note {
+    font-size: 0.72rem;
+    line-height: 1.8;
+    color: t.color(subtle);
+  }
+  .progress-footnote {
+    margin: 12px 0 0;
+  }
+  .streak-baseline-note {
+    margin: -4px 4px 0;
+    @include t.from(tablet) {
+      grid-column: 1 / -1;
+    }
+    @include t.from(wide) {
+      grid-column: 1;
+    }
+  }
+  .levels-grid {
+    display: grid;
+    gap: 18px;
+    @include t.from(small) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    @include t.from(wide) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .level-progress-block {
+    margin: 0;
+    padding: 0;
+    @include t.from(small) {
+      padding: 4px;
+    }
+  }
+  .level-progress-heading {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: t.color(indigo);
+    margin: 0 0 8px;
+    letter-spacing: 0.04em;
+  }
+  .level-current-badge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 8px;
+    border-radius: 10px;
+    background: t.color(indigo);
+    color: t.color(white);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    vertical-align: 1px;
+  }
+  .advance-block {
+    padding: 10px 0;
+    font-size: 0.88rem;
+    color: t.color(ink);
+    p {
+      margin: 0 0 8px;
+    }
+    &:not(:last-child) {
+      border-bottom: 1px dashed t.color(border);
+      margin-bottom: 4px;
+    }
+    &.advance-ready p {
+      color: t.color(green);
+      font-weight: 700;
+    }
+  }
+  .route-step {
+    font-size: 0.88rem;
+    line-height: 1.8;
+    margin-bottom: 8px;
+    b {
+      color: t.color(indigo-deep);
+    }
+  }
+}

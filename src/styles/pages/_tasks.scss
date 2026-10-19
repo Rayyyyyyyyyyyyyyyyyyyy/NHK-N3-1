@@ -1,0 +1,167 @@
+@use '../abstracts/tokens' as t;
+
+@layer components {
+  .today-tasks {
+    .section-heading {
+      align-items: flex-start;
+    }
+    .card-title {
+      font-size: 1.2rem;
+    }
+  }
+  .task-plan-badge {
+    flex: none;
+    color: t.color(indigo);
+    background: t.color(paper);
+    border: 1px solid t.color(border);
+    font-size: 0.7rem;
+    border-radius: 999px;
+    padding: 6px 10px;
+  }
+  .task-plan-controls {
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 22px 0 8px;
+  }
+  .task-branch-label {
+    display: grid;
+    gap: 7px;
+    flex: 1 1 160px;
+    font-size: 0.75rem;
+    color: t.color(subtle);
+  }
+  .task-build-button {
+    flex: 1 1 160px;
+    min-height: 44px;
+    font-size: 0.82rem;
+    &:disabled {
+      color: t.color(subtle);
+      background: t.color(paper);
+      border-color: t.color(border);
+    }
+  }
+  .task-branch-note,
+  .task-footnote {
+    margin: 12px 0 0;
+    font-size: 0.72rem;
+    line-height: 1.8;
+    color: t.color(subtle);
+  }
+  .task-list {
+    margin-top: 10px;
+  }
+  .task-group {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 12px;
+    padding: 20px 0;
+    border-bottom: 1px solid t.color(border);
+    &:last-child {
+      border-bottom: 0;
+      padding-bottom: 10px;
+    }
+  }
+  .task-number {
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    background: t.color(paper);
+    color: t.color(indigo);
+    border: 1px solid t.color(border);
+    font-size: 0.72rem;
+  }
+  .task-complete {
+    .task-number {
+      background: t.color(correct-bg);
+      color: t.color(green);
+    }
+    .task-progress-track > div {
+      background: t.color(green);
+    }
+  }
+  .task-content {
+    min-width: 0;
+    > p,
+    .task-error p {
+      font-size: 0.75rem;
+      line-height: 1.7;
+      color: t.color(subtle);
+      margin: 6px 0 0;
+      overflow-wrap: anywhere;
+    }
+    .task-error,
+    .task-error p {
+      color: t.color(vermilion);
+    }
+    @include t.from(small) {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      column-gap: 18px;
+      > :not(.task-actions) {
+        grid-column: 1;
+      }
+    }
+  }
+  .task-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 4px 0 6px;
+    h4 {
+      font-size: 0.95rem;
+      margin: 0;
+      color: t.color(indigo-deep);
+    }
+  }
+  .task-state-label {
+    font-size: 0.7rem;
+    color: t.color(subtle);
+  }
+  .task-quantity {
+    font-size: 1.05rem;
+    color: t.color(indigo);
+    span {
+      color: t.color(subtle);
+      font-size: 0.75rem;
+    }
+  }
+  .task-progress-track {
+    height: 4px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: t.color(border);
+    margin-top: 10px;
+    > div {
+      height: 100%;
+      background: t.color(indigo);
+    }
+  }
+  .task-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    @include t.from(small) {
+      grid-column: 2;
+      grid-row: 1 / span 4;
+      align-self: center;
+      flex-direction: column;
+      margin-top: 0;
+    }
+  }
+  .task-start {
+    font-size: 0.78rem;
+    padding: 9px 12px;
+    min-height: 40px;
+  }
+  .task-footnote {
+    border-top: 1px solid t.color(border);
+    padding-top: 14px;
+  }
+}

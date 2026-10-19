@@ -12,8 +12,20 @@ const article = {
   text: '本文',
   notes: [{ term: '語', meaning: '字' }],
   questions: [
-    { q: '一', answer: '正一', distractors: ['錯一', '錯二', '錯三'], explanation: '解析一' },
-    { q: '二', answer: '正二', distractors: ['誤一', '誤二', '誤三'], explanation: '解析二' },
+    {
+      id: 'rq-test-1',
+      q: '一',
+      answer: '正一',
+      distractors: ['錯一', '錯二', '錯三'],
+      explanation: '解析一',
+    },
+    {
+      id: 'rq-test-2',
+      q: '二',
+      answer: '正二',
+      distractors: ['誤一', '誤二', '誤三'],
+      explanation: '解析二',
+    },
   ],
 }
 beforeEach(() => {

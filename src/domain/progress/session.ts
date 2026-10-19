@@ -1,29 +1,36 @@
-import { decodeCode, normalize, type ProgressState } from './state'
+import { decodeCode, cloneState, type ProgressState } from './state'
+import { validateV5 } from './validation'
 import type { ProgressStorage, Snapshot } from '../../services/progressStorage'
-export function createProgressSession(storage: ProgressStorage) {
+import { systemClock, type Clock } from '../learning/types'
+import { localDate } from '../learning/calendar'
+export function createProgressSession(storage: ProgressStorage, clock: Clock = systemClock) {
+  const loaded = storage.loadDocument()
   return {
-    state: storage.load(),
-    backups: storage.backups(),
+    state: loaded.state,
+    backups: loaded.backups,
+    commit(next: ProgressState) {
+      const saved = storage.saveDocument({ version: 5, state: next, backups: this.backups })
+      this.state = next
+      return saved
+    },
     replace(next: ProgressState, reason: Snapshot['reason']) {
+      if (!validateV5(next)) throw Error('進度驗證失敗，尚未覆寫。')
       const backups = [
         ...this.backups,
-        { state: normalize(this.state), at: new Date().toISOString(), reason },
+        { state: cloneState(this.state), at: clock().toISOString(), reason },
       ].slice(-10)
-      // Without a durable snapshot, an import must not destroy in-memory learning.
-      if (!storage.saveBackups(backups))
-        throw Error('無法保存撤銷備份，進度尚未覆寫。請先匯出進度碼。')
+      if (!storage.saveDocument({ version: 5, state: next, backups }, true))
+        throw Error('無法保存完整進度與撤銷備份，進度尚未覆寫。請先匯出進度碼。')
       this.backups = backups
-      this.state = next
-      storage.save(this.state)
+      this.state = cloneState(next)
     },
     importCode(code: string) {
-      const next = decodeCode(code)
-      this.replace(next, '匯入前')
+      this.replace(decodeCode(code, localDate(clock())), '匯入前')
     },
     restore(index?: number): boolean {
       const snapshot = this.backups[index ?? this.backups.length - 1]
       if (!snapshot) return false
-      this.replace(normalize(snapshot.state), '撤銷前')
+      this.replace(cloneState(snapshot.state), '撤銷前')
       return true
     },
   }

@@ -1,0 +1,103 @@
+@use '../abstracts/tokens' as t;
+
+@layer components {
+  .app-main-study .page-content > .btn-row {
+    @include t.from(desktop) {
+      justify-content: flex-start;
+      .btn {
+        flex: 0 1 auto;
+      }
+    }
+  }
+  .reading-workspace,
+  .reading-library,
+  .listening-grid {
+    display: grid;
+    gap: 18px;
+    align-items: start;
+  }
+  .reading-workspace {
+    @include t.from(wide) {
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+      gap: 24px;
+    }
+  }
+  .reading-context {
+    @include t.from(wide) {
+      position: sticky;
+      top: 24px;
+      .reading-text {
+        margin-top: 0;
+      }
+    }
+  }
+  .reading-questions {
+    min-width: 0;
+  }
+  .reading-library {
+    margin-bottom: 24px;
+    @include t.from(small) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  .reading-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    min-height: 104px;
+    border: 1px solid t.color(border);
+    border-radius: 12px;
+    gap: 16px;
+    background: t.color(white);
+    text-decoration: none;
+    color: t.color(ink);
+    overflow-wrap: anywhere;
+  }
+  .listening-grid {
+    margin-bottom: 24px;
+    align-items: stretch;
+    > .q-card {
+      margin-bottom: 0;
+    }
+    @include t.from(wide) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-auto-rows: 1fr;
+      gap: 24px;
+    }
+  }
+  .listening-resources {
+    @include t.from(desktop) {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+  }
+  .ext-link-card .btn {
+    margin-top: 8px;
+  }
+  .review-summary {
+    margin: 0 0 24px;
+    color: t.color(subtle);
+    font-size: 0.9rem;
+    line-height: 1.8;
+  }
+  .review-toolbar {
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+    > .btn {
+      min-height: 44px;
+    }
+  }
+  .review-filter {
+    display: grid;
+    gap: 8px;
+    min-width: 160px;
+    flex: 1 1 160px;
+    max-width: 260px;
+    font-size: 0.82rem;
+    color: t.color(subtle);
+  }
+}

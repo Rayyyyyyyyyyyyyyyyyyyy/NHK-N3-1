@@ -1,60 +1,69 @@
 <script setup lang="ts">
+import { RouterLink } from 'vue-router'
 import { computed, ref, watch } from 'vue'
 import { useProgressStore } from '../stores/progress'
 import { useQuestionBank } from '../composables/useQuestionBank'
-import { drawDeck, quizFor, type Vocab } from '../domain/questions'
-import { lookupKanji } from '../services/kanji'
-import ChoiceQuestion from '../components/ChoiceQuestion.vue'
+import { useStudySession } from '../composables/useStudySession'
+import { vocabQueue } from '../domain/learning/plans'
+import { quizFor, type Vocab } from '../domain/questions'
+import { itemKey } from '../domain/learning/types'
+import LearningChoice from '../components/LearningChoice.vue'
+import FlashcardExercise from '../components/FlashcardExercise.vue'
 import BankStatus from '../components/BankStatus.vue'
+import StudyStatus from '../components/StudyStatus.vue'
 const store = useProgressStore(),
   level = store.session.state.level
 const { items, loading, failed, retry } = useQuestionBank('vocab', level)
+const { daily, due, invalid, noTargets, selected, missing, round, today, reset } = useStudySession(
+  'vocab',
+  items,
+)
 const mode = ref('flashcard'),
   deck = ref<Vocab[]>([]),
   index = ref(0),
-  flipped = ref(false),
   streak = ref(0),
   quiz = ref<ReturnType<typeof quizFor>>(),
-  quizId = ref(0),
-  detail = ref('')
+  quizId = ref(0)
 const current = computed(() => deck.value[index.value])
-function draw() {
-  deck.value = drawDeck(
-    items.value,
-    store.session.state.vKnown[level],
-    store.session.state.vLearning[level],
-  )
-  index.value = 0
-  flipped.value = false
-  detail.value = ''
-}
+const dueCount = computed(
+  () =>
+    new Set(
+      items.value
+        .filter(
+          (v) =>
+            store.session.state.schedules[itemKey({ level, kind: 'vocab', id: v.w })]?.dueOn <=
+            today.value,
+        )
+        .map((v) => v.w),
+    ).size,
+)
 function nextQuiz() {
-  if (items.value.length) quiz.value = quizFor(items.value)
+  const candidates = daily.value || due.value ? deck.value.slice(index.value) : items.value
+  quiz.value = candidates.length
+    ? quizFor(items.value, candidates[0] && (daily.value || due.value) ? candidates[0] : undefined)
+    : undefined
   quizId.value++
 }
-watch(items, () => {
-  draw()
+function draw() {
+  deck.value = daily.value
+    ? selected.value
+    : vocabQueue(items.value, store.session.state, level, today.value, due.value)
+  index.value = 0
+  streak.value = 0
   nextQuiz()
-})
-function mark(known: boolean) {
-  if (!current.value) return
-  store.markVocab(level, current.value.w, known)
-  index.value++
-  flipped.value = false
-  detail.value = ''
-  lookupSequence++
 }
-let lookupSequence = 0
-async function lookup(char: string) {
-  const sequence = ++lookupSequence
-  detail.value = '查詢中…'
-  try {
-    const k = await lookupKanji(char)
-    if (sequence !== lookupSequence) return
-    detail.value = `${char}（JLPT ${k.jlpt ? 'N' + k.jlpt : '未標示'}）\n音讀：${k.on_readings.join('、') || '無'}\n訓讀：${k.kun_readings.join('、') || '無'}\n字義：${k.meanings.join('、') || '無'}`
-  } catch {
-    if (sequence === lookupSequence) detail.value = '查詢失敗，稍後再試'
-  }
+watch([selected, round], draw)
+watch(mode, reset)
+function next() {
+  index.value++
+  nextQuiz()
+}
+function quizAnswer(correct: boolean) {
+  streak.value = correct ? streak.value + 1 : 0
+}
+function nextQuestion() {
+  if (daily.value || due.value) index.value++
+  nextQuiz()
 }
 </script>
 <template>
@@ -64,9 +73,13 @@ async function lookup(char: string) {
   <p class="meta-row">
     <span
       >已掌握 <b>{{ Object.keys(store.session.state.vKnown[level]).length }}</b> ／
-      {{ items.length }}</span
+      {{ items.length }}　到期 {{ dueCount }}</span
     >
   </p>
+  <div class="btn-row">
+    <RouterLink class="btn btn-outline" to="/vocab?study=due">開始到期複習</RouterLink
+    ><RouterLink v-if="due" class="btn btn-outline" to="/vocab">自由練習</RouterLink>
+  </div>
   <div class="mode-toggle">
     <button :class="{ active: mode === 'flashcard' }" @click="mode = 'flashcard'">翻卡記憶</button
     ><button :class="{ active: mode === 'quiz' }" @click="mode = 'quiz'">讀音測驗</button>
@@ -77,65 +90,54 @@ async function lookup(char: string) {
     :empty="!items.length"
     empty-text="此等級目前尚無單字。"
     @retry="retry"
-  /><template v-if="!loading && !failed && items.length"
-    ><template v-if="mode === 'flashcard'"
+  />
+  <StudyStatus
+    v-if="!loading && !failed"
+    :daily="daily"
+    :no-targets="noTargets"
+    :invalid="invalid"
+    :missing="missing"
+    :empty="!deck.length"
+  />
+  <template v-if="!loading && !failed && items.length && !invalid">
+    <template v-if="mode === 'flashcard'"
       ><template v-if="current"
-        ><p class="meta-row">
-          <span>第 {{ index + 1 }} / {{ deck.length }} 張</span>
-        </p>
-        <div
-          class="flashcard"
-          tabindex="0"
-          aria-label="點卡片翻面"
-          @click="flipped = !flipped"
-          @keydown.enter.self="flipped = !flipped"
-          @keydown.space.prevent.self="flipped = !flipped"
-        >
-          <template v-if="flipped"
-            ><div class="fc-reading">{{ current.r }}</div>
-            <div class="fc-front-word back-word">{{ current.w }}</div>
-            <div class="fc-zh">{{ current.zh }}</div>
-            <div class="fc-en">{{ current.en }}</div>
-            <div class="kanji-chip-row">
-              <button
-                v-for="char in [...new Set(current.w.match(/[一-鿿㐀-䶿]/g) ?? [])]"
-                :key="char"
-                class="kanji-chip"
-                @click.stop="lookup(char)"
-              >
-                {{ char }}
-              </button>
-            </div>
-            <div v-if="detail" class="kanji-detail whitespace-pre-line" role="status">
-              {{ detail }}
-            </div></template
-          ><template v-else
-            ><div class="fc-front-word">{{ current.w }}</div>
-            <div class="fc-hint">點卡片看讀音與釋義</div></template
-          >
-        </div>
-        <div v-if="flipped" class="btn-row mt-3.5">
-          <button class="btn bg-white text-vermilion border-vermilion" @click="mark(false)">
-            還不熟</button
-          ><button class="btn bg-green border-green" @click="mark(true)">記住了</button>
-        </div></template
-      >
+        ><p class="meta-row">第 {{ index + 1 }} / {{ deck.length }} 張</p>
+        <FlashcardExercise
+          :key="`${round}:${index}:${mode}:${current.w}`"
+          :item="current"
+          :level="level"
+          @answer="next"
+      /></template>
       <div v-else class="card text-center">
-        <p>這一輪 {{ deck.length }} 張都複習完了！</p>
-        <button class="btn" @click="draw">再抽 10 張</button>
+        <p>
+          {{
+            noTargets || (missing && !deck.length)
+              ? '目前無可練習目標，請返回今日任務。'
+              : due && !deck.length
+                ? '目前沒有到期單字。'
+                : `這一輪 ${deck.length} 張都複習完了！`
+          }}
+        </p>
+        <button v-if="!daily" class="btn" @click="draw">
+          {{ due ? '開始下一輪到期複習' : '再抽 10 張' }}</button
+        ><button v-else class="btn" @click="reset">更新剩餘任務</button>
       </div></template
-    ><template v-else-if="quiz"
+    >
+    <template v-else-if="quiz"
       ><p class="quiz-streak">本次 {{ streak }} 連勝</p>
       <div class="q-card">
-        <p class="text-sm text-subtle mt-0 mb-1.5">這個字怎麼唸？</p>
-        <p class="text-3xl font-bold text-indigo-deep mt-0 mb-3.5">{{ quiz.item.w }}</p>
-        <ChoiceQuestion
+        <p class="text-sm text-subtle">這個字怎麼唸？</p>
+        <p class="text-3xl font-bold text-indigo-deep">{{ quiz.item.w }}</p>
+        <LearningChoice
           :key="quizId"
+          :item-ref="{ level, kind: 'vocab', id: quiz.item.w }"
+          mode="pronunciation"
           :answer="quiz.item.r"
           :distractors="[]"
           :options="quiz.options"
           :explanation="`${quiz.item.w}（${quiz.item.r}）：${quiz.item.zh || quiz.item.en}`"
-          @answer="streak = $event ? streak + 1 : 0"
+          @answer="quizAnswer"
           ><template #answered
             ><div class="btn-row mt-3">
               <button
@@ -144,16 +146,23 @@ async function lookup(char: string) {
                 @click="store.markVocab(level, quiz.item.w, true)"
               >
                 標為已掌握</button
-              ><button class="btn" @click="nextQuiz">下一題</button>
+              ><button class="btn" @click="nextQuestion">下一題</button>
             </div></template
-          ></ChoiceQuestion
+          ></LearningChoice
         >
       </div></template
-    ></template
-  >
+    >
+    <div v-else class="card">
+      <p>
+        {{
+          noTargets || (missing && !deck.length)
+            ? '目前無可練習目標，請返回今日任務。'
+            : due
+              ? '目前沒有到期項目，或本輪已完成。'
+              : '本輪測驗已完成。'
+        }}
+      </p>
+      <button class="btn" @click="daily ? reset() : draw()">更新剩餘任務／下一輪</button>
+    </div>
+  </template>
 </template>
-<style scoped>
-.flashcard .back-word {
-  font-size: 1.8rem;
-}
-</style>

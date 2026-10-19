@@ -41,3 +41,73 @@ it('valid counts do not request banks', async () => {
   expect(await createQuestionBank(fetcher).counts()).toEqual(counts)
   expect(fetcher).toHaveBeenCalledTimes(1)
 })
+it('distinguishes failed resource, missing stable ID and reading subquestion after reordering', async () => {
+  const article = {
+    id: 'article',
+    level: 'n3',
+    title: '題',
+    type: '文',
+    text: '本文',
+    notes: [],
+    questions: [
+      { id: 'rq-2', q: '問', answer: '正', distractors: ['一', '二', '三'], explanation: '解' },
+      { id: 'rq-1', q: '原題', answer: '正', distractors: ['一', '二', '三'], explanation: '解' },
+    ],
+  }
+  const fetcher = vi
+    .fn()
+    .mockRejectedValueOnce(Error())
+    .mockResolvedValue(response([article]))
+  const bank = createQuestionBank(fetcher)
+  const ref = { level: 'n3' as const, kind: 'reading' as const, id: 'rq-1', articleId: 'article' }
+  expect((await bank.resolve(ref)).status).toBe('error')
+  expect(await bank.resolve(ref)).toMatchObject({
+    status: 'ready',
+    item: { id: 'rq-1', q: '原題' },
+    article: { id: 'article' },
+  })
+  expect((await bank.resolve({ ...ref, id: 'gone' })).status).toBe('unavailable')
+  expect(fetcher).toHaveBeenCalledTimes(2)
+})
+it.each(['duplicate', 'empty', 'blank', 'invalid-level'])(
+  'rejects invalid reading structure: %s',
+  async (mode) => {
+    const q = {
+      id: 'rq-1',
+      q: '問',
+      answer: '正',
+      distractors: ['一', '二', '三'],
+      explanation: '解',
+    }
+    const a = {
+      id: 'article',
+      level: mode === 'invalid-level' ? 'n6' : 'n3',
+      title: mode === 'blank' ? ' ' : '題',
+      type: '文',
+      text: '本文',
+      notes: [],
+      questions: mode === 'empty' ? [] : mode === 'duplicate' ? [q, q] : [q],
+    }
+    expect(
+      (await createQuestionBank(vi.fn().mockResolvedValue(response([a]))).load('reading', 'n3'))
+        .failed,
+    ).toBe(true)
+  },
+)
+it('rejects grammar IDs from another level instead of caching them', async () => {
+  const item = {
+    id: 'g-n2-031',
+    q: '問',
+    answer: '正',
+    distractors: ['一', '二', '三'],
+    explanation: '解',
+  }
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(response([item]))
+    .mockResolvedValue(response([{ ...item, id: 'g-n3-031' }]))
+  const bank = createQuestionBank(fetcher)
+  expect((await bank.load('grammar', 'n3')).failed).toBe(true)
+  expect((await bank.load('grammar', 'n3')).failed).toBe(false)
+  expect(fetcher).toHaveBeenCalledTimes(2)
+})

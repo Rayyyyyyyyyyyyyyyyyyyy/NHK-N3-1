@@ -13,20 +13,20 @@
   },
   "n3": {
     "vocab": 2139,
-    "grammar": 20,
-    "reading": 1,
-    "listening": 4
+    "grammar": 30,
+    "reading": 3,
+    "listening": 7
   },
   "n2": {
     "vocab": 1748,
-    "grammar": 30,
-    "reading": 2,
-    "listening": 4
+    "grammar": 40,
+    "reading": 4,
+    "listening": 7
   },
   "n1": {
     "vocab": 2699,
-    "grammar": 15,
-    "reading": 1,
-    "listening": 3
+    "grammar": 25,
+    "reading": 3,
+    "listening": 6
   }
 }

@@ -1,0 +1,16 @@
+// Modules emit into Tailwind layers so local utilities keep predictable priority.
+@use 'base';
+@use 'layout/shell';
+@use 'layout/sidebar';
+@use 'layout/header';
+@use 'layout/navigation';
+@use 'components/primitives';
+@use 'components/exercises';
+@use 'components/speech-player';
+@use 'pages/home';
+@use 'pages/tasks';
+@use 'pages/study';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

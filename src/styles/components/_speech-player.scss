@@ -1,0 +1,114 @@
+@use '../abstracts/tokens' as t;
+
+@layer components {
+  .speech-player {
+    max-width: 400px;
+    margin: 0 auto;
+  }
+  .speech-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+  .play-btn {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: t.color(indigo);
+    color: t.color(white);
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    &:disabled {
+      opacity: 0.65;
+      cursor: wait;
+    }
+  }
+  .speech-stop {
+    min-height: 44px;
+    border: 1px solid t.color(border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: t.color(indigo);
+    background: t.color(white);
+    cursor: pointer;
+    &:disabled {
+      color: t.color(muted);
+      opacity: 0.6;
+    }
+  }
+  .speech-progress {
+    height: 6px;
+    margin-top: 20px;
+    border-radius: 6px;
+    background: t.color(border);
+    overflow: hidden;
+  }
+  .speech-progress-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: t.color(indigo);
+    transition: width 0.2s linear;
+    &.is-indeterminate {
+      width: 35%;
+      animation: speech-loading 1.4s ease-in-out infinite alternate;
+    }
+    &.is-paused {
+      animation-play-state: paused;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+      transition: none;
+    }
+  }
+  .speech-progress-caption {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 8px;
+    color: t.color(subtle);
+    font-size: 0.72rem;
+    min-height: 20px;
+  }
+  .speed-row {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .speed-btn {
+    min-height: 36px;
+    border: 1px solid t.color(border);
+    background: t.color(white);
+    border-radius: 16px;
+    padding: 5px 12px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    color: t.color(ink);
+    &.active {
+      background: t.color(indigo);
+      border-color: t.color(indigo);
+      color: t.color(white);
+    }
+    &:disabled {
+      opacity: 0.65;
+    }
+  }
+  .listening-prompt {
+    font-weight: 700;
+    margin: 20px 0 0;
+    min-height: 3.4em;
+    line-height: 1.7;
+  }
+}
+@keyframes speech-loading {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(185%);
+  }
+}

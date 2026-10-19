@@ -15,7 +15,7 @@ const memory = () => {
   }
 }
 const codeFor = (v: unknown) => btoa(encodeURIComponent(JSON.stringify(v)))
-describe('archive non-migration regression cases, adapted to v4 and reversible undo', () => {
+describe('archive non-migration regressions, retained with v5 and reversible undo', () => {
   it('rejects unrelated JSON and malformed input without touching progress or backups', () => {
     const s = createProgressSession(createProgressStorage(memory()))
     s.state.vKnown.n3['作法'] = true

@@ -1,0 +1,37 @@
+@use '../abstracts/tokens' as t;
+
+@layer components {
+  .bottom-nav {
+    position: fixed;
+    inset: auto 0 0;
+    display: flex;
+    background: t.color(white);
+    border-top: 1px solid t.color(border);
+    padding: 2px max(8px, env(safe-area-inset-left, 0px)) env(safe-area-inset-bottom, 0px);
+    z-index: 50;
+    @include t.from(desktop) {
+      display: none;
+    }
+  }
+  .nav-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 10px 0 8px;
+    text-decoration: none;
+    color: t.color(muted);
+    &.active {
+      color: t.color(indigo);
+      font-weight: 700;
+    }
+    .nav-icon {
+      width: 21px;
+      height: 21px;
+    }
+    .nav-label {
+      font-size: 0.68rem;
+    }
+  }
+}

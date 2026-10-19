@@ -1,6 +1,7 @@
 import { it, expect, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useProgressStore } from './progress'
+import { newAttemptId } from '../domain/learning/types'
 import { STORAGE_KEY } from '../services/progressStorage'
 beforeEach(() => {
   localStorage.clear()
@@ -12,24 +13,48 @@ it('marks vocabulary exclusively, grammar by stable ID, reading and listening in
   s.markVocab('n3', '水', false)
   expect(s.session.state.vKnown.n3.水).toBeUndefined()
   expect(s.session.state.vLearning.n3.水).toBe(true)
-  s.markGrammar('n3', 'g-n3-001', true)
-  s.markGrammar('n3', 'g-n3-001', false)
+  for (const correct of [true, false])
+    s.recordLearning({
+      attemptId: newAttemptId(),
+      ref: { level: 'n3', kind: 'grammar', id: 'g-n3-001' },
+      mode: 'grammar',
+      correct,
+    })
   expect(s.session.state.gDone.n3).toEqual([])
-  s.markReading('n3', 'r1')
-  s.markReading('n3', 'r1')
+  const article = 'article',
+    qid = 'rq-1',
+    resultId = JSON.stringify([article, qid])
+  s.recordLearning({
+    attemptId: resultId,
+    ref: { level: 'n3', kind: 'reading', id: qid, articleId: 'r1' },
+    mode: 'reading',
+    correct: true,
+  })
+  for (let i = 0; i < 2; i++)
+    s.completeReading({
+      attemptId: article,
+      level: 'n3',
+      articleId: 'r1',
+      questionIds: [qid],
+      resultIds: [resultId],
+    })
   expect(s.session.state.rDone.n3).toEqual(['r1'])
-  s.markListening('n3', 'l1', true)
-  s.markListening('n3', 'l1', false)
+  for (const correct of [true, false])
+    s.recordLearning({
+      attemptId: newAttemptId(),
+      ref: { level: 'n3', kind: 'listening', id: 'l1' },
+      mode: 'listening',
+      correct,
+    })
   expect(s.session.state.lDone.n3).toEqual(['l1'])
   expect(s.session.state.lCorrect.n3).toEqual([])
   expect(s.session.state.rDone.n5).toEqual([])
 })
-it('the app subscription persists mutations and reopens the selected level', () => {
+it('explicit commits persist mutations and reopens the selected level', () => {
   const s = useProgressStore()
-  s.$subscribe(() => s.persist(), { flush: 'sync' })
   s.setLevel('n2')
   s.markVocab('n2', '水', true)
-  expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!).vKnown.n2.水).toBe(true)
+  expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!).state.vKnown.n2.水).toBe(true)
   setActivePinia(createPinia())
   expect(useProgressStore().session.state.level).toBe('n2')
 })

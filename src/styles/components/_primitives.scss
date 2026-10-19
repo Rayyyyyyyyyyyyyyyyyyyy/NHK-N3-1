@@ -1,0 +1,229 @@
+@use '../abstracts/tokens' as t;
+
+@layer components {
+  .card,
+  .q-card {
+    background: t.color(white);
+    border: 1px solid t.color(border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    @include t.from(small) {
+      padding: 24px;
+    }
+  }
+  .card {
+    h2,
+    h3 {
+      margin-top: 0;
+      color: t.color(indigo-deep);
+    }
+  }
+  .q-card {
+    border-left: 4px solid t.color(indigo);
+  }
+  .page-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 4px 0 14px;
+    color: t.color(indigo-deep);
+    @include t.from(desktop) {
+      font-size: 1.75rem;
+    }
+  }
+  .card-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0 0 10px;
+    color: t.color(indigo-deep);
+  }
+  .section-eyebrow {
+    font-size: 0.63rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    color: t.color(subtle);
+    margin: 0 0 8px;
+  }
+  .page-intro,
+  .section-description {
+    color: t.color(subtle);
+    font-size: 0.82rem;
+    line-height: 1.7;
+    margin: 6px 0 0;
+  }
+  .section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    .card-title {
+      margin: 0;
+    }
+  }
+  .btn {
+    display: inline-block;
+    min-height: 44px;
+    font-size: 0.9rem;
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: 1px solid t.color(indigo);
+    background: t.color(indigo);
+    color: t.color(white);
+    cursor: pointer;
+    text-decoration: none;
+    text-align: center;
+    overflow-wrap: anywhere;
+    &:active {
+      opacity: 0.85;
+    }
+    &-outline {
+      background: t.color(white);
+      color: t.color(indigo);
+    }
+    &-block {
+      display: block;
+      width: 100%;
+    }
+  }
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    > .btn {
+      flex: 1;
+    }
+  }
+  .text-action {
+    border: 0;
+    background: transparent;
+    color: t.color(indigo);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    min-height: 40px;
+    padding: 4px 0;
+  }
+  .meta-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 0.82rem;
+    color: t.color(subtle);
+    margin-bottom: 8px;
+  }
+  .status-msg {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    &.ok {
+      color: t.color(green);
+    }
+    &.err {
+      color: t.color(vermilion);
+    }
+  }
+  .storage-notice {
+    border: 1px solid t.color(vermilion);
+    border-radius: 10px;
+    background: t.color(wrong-bg);
+    padding: 14px;
+    line-height: 1.7;
+    margin-bottom: 20px;
+  }
+  .storage-recovery-link {
+    display: block;
+    margin-top: 8px;
+    text-underline-offset: 3px;
+  }
+  .back-link {
+    display: inline-block;
+    margin-bottom: 12px;
+    font-size: 0.85rem;
+    color: t.color(indigo);
+    text-decoration: none;
+  }
+  .progress-row {
+    margin-bottom: 12px;
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 0.85rem;
+    margin-bottom: 4px;
+  }
+  .progress-track {
+    height: 10px;
+    border-radius: 6px;
+    background: t.color(paper);
+    border: 1px solid t.color(border);
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, t.color(indigo), t.color(indigo-deep));
+    border-radius: 6px 0 0 6px;
+    transition: width 0.3s ease;
+  }
+  .card > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    cursor: pointer;
+    list-style: none;
+    min-height: 40px;
+    color: t.color(indigo-deep);
+    &::-webkit-details-marker {
+      display: none;
+    }
+    strong {
+      font-size: 0.9rem;
+    }
+    small {
+      display: block;
+      color: t.color(subtle);
+      font-size: 0.73rem;
+      margin-top: 6px;
+      line-height: 1.6;
+    }
+  }
+  .details-indicator {
+    font-size: 1.2rem;
+    transition: transform 0.2s ease;
+  }
+  .card[open] > summary .details-indicator {
+    transform: rotate(45deg);
+  }
+  .details-body {
+    padding-top: 22px;
+    margin-top: 18px;
+    border-top: 1px solid t.color(border);
+  }
+  .progress-code {
+    width: 100%;
+    min-height: 90px;
+    font-family: monospace;
+    font-size: 0.75rem;
+    padding: 8px;
+    border: 1px solid t.color(border);
+    border-radius: 8px;
+    resize: vertical;
+    color: t.color(ink);
+    background: t.color(paper);
+    overflow-wrap: anywhere;
+  }
+  @media (hover: hover) {
+    .btn:hover:not(:disabled),
+    .level-pill:hover,
+    .sidebar-link:hover,
+    .review-link:hover,
+    .reading-list-item:hover,
+    summary:hover {
+      filter: brightness(0.96);
+    }
+  }
+}

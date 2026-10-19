@@ -4,6 +4,7 @@ export const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/', component: HomePage },
+    { path: '/review', component: () => import('./pages/ReviewPage.vue') },
     { path: '/vocab', component: () => import('./pages/VocabPage.vue') },
     { path: '/grammar', component: () => import('./pages/GrammarPage.vue') },
     { path: '/reading', component: () => import('./pages/ReadingPage.vue') },

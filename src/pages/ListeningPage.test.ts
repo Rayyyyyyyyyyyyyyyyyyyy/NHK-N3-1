@@ -70,10 +70,63 @@ it('speaks Japanese at the selected rate, replaces playback, stops in background
     }),
   )
   const before = engine.cancel.mock.calls.length
-  vi.spyOn(document, 'hidden', 'get').mockReturnValue(true)
+  const visibility = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true)
   document.dispatchEvent(new Event('visibilitychange'))
   expect(engine.cancel.mock.calls.length).toBeGreaterThan(before)
+  visibility.mockReturnValue(false)
+  await flushPromises()
+  await w.find('.play-btn').trigger('click')
+  await flushPromises()
   const after = engine.cancel.mock.calls.length
   w.unmount()
   expect(engine.cancel.mock.calls.length).toBeGreaterThan(after)
+})
+it('review uses the same speech lifecycle and never clears a listening mistake merely by playback', async () => {
+  const { default: ReviewPage } = await import('./ReviewPage.vue')
+  const { useProgressStore } = await import('../stores/progress')
+  const store = useProgressStore()
+  store.recordLearning({
+    attemptId: 'wrong-listening',
+    ref: { level: 'n5', kind: 'listening', id: item.id },
+    mode: 'listening',
+    correct: false,
+  })
+  vi.spyOn(questionBank, 'resolve').mockResolvedValue({ status: 'ready', item })
+  const engine = Object.assign(new EventTarget(), {
+    getVoices: vi.fn(() => [{ lang: 'ja-JP', name: 'Japanese' }]),
+    speak: vi.fn(),
+    cancel: vi.fn(),
+    pause: vi.fn(),
+    resume: vi.fn(),
+  })
+  vi.stubGlobal('speechSynthesis', engine)
+  vi.stubGlobal(
+    'SpeechSynthesisUtterance',
+    class {
+      text: string
+      constructor(text: string) {
+        this.text = text
+      }
+    },
+  )
+  const w = mount(ReviewPage, {
+    global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } },
+  })
+  await flushPromises()
+  await w.find('.play-btn').trigger('click')
+  await flushPromises()
+  expect(engine.speak).toHaveBeenCalled()
+  expect(store.session.state.results).toHaveLength(1)
+  expect(Object.values(store.session.state.mistakes)[0].pending).toBe(true)
+  const before = engine.cancel.mock.calls.length
+  const visibility = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true)
+  document.dispatchEvent(new Event('visibilitychange'))
+  expect(engine.cancel.mock.calls.length).toBeGreaterThan(before)
+  visibility.mockReturnValue(false)
+  await flushPromises()
+  await w.find('.play-btn').trigger('click')
+  await flushPromises()
+  const background = engine.cancel.mock.calls.length
+  w.unmount()
+  expect(engine.cancel.mock.calls.length).toBeGreaterThan(background)
 })
