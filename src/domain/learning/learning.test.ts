@@ -5,7 +5,7 @@ import { upgradeV4 } from '../progress/upgrade'
 import { recordResult, completeArticle } from './reducer'
 import { itemKey, dayKey, type LearningInput } from './types'
 import { localDate, addDays } from './calendar'
-import { generateGroup, groupProgress, refsFor, vocabQueue, unfinished } from './plans'
+import { generateGroup, refsFor, vocabQueue, inspectGroup } from './plans'
 import {
   createProgressStorage,
   STORAGE_KEY,
@@ -302,12 +302,8 @@ describe('spaced local-calendar vocabulary', () => {
 describe('fixed tasks and persistence', () => {
   it('counts prior-day matching activity once, fixes unique targets and never completes zero', () => {
     let s = recordResult(defaultState(), input('水', false, 'a'), clock())
-    const group = generateGroup(
-      s,
-      refsFor('vocab', 'n3', [{ w: '水', r: 'みず', zh: '水', en: 'water' }]),
-      'vocab',
-      '2026-10-16',
-    )
+    const items = [{ w: '水', r: 'みず', zh: '水', en: 'water' }]
+    const group = generateGroup(s, refsFor('vocab', 'n3', items), 'vocab', '2026-10-16')
     const plan = {
       date: '2026-10-16',
       level: 'n3' as const,
@@ -316,17 +312,17 @@ describe('fixed tasks and persistence', () => {
       groups: { vocab: group },
     }
     s.plans[dayKey(plan.date, plan.level)] = plan
-    expect(groupProgress(s, plan, 'vocab')).toEqual({
+    expect(inspectGroup(s, plan, 'vocab', items)).toMatchObject({
       done: 1,
       total: 1,
       correct: 0,
       complete: true,
     })
-    expect(unfinished(s, plan, 'vocab')).toEqual([])
-    expect(groupProgress(s, plan, 'grammar').complete).toBe(false)
+    expect(inspectGroup(s, plan, 'vocab', items).selected).toEqual([])
+    expect(inspectGroup(s, plan, 'grammar', []).complete).toBe(false)
     s = recordResult(s, input('水', true, 'redo'), clock())
-    expect(groupProgress(s, plan, 'vocab').done).toBe(1)
-    expect(groupProgress(s, plan, 'vocab').correct).toBe(1)
+    expect(inspectGroup(s, plan, 'vocab', items).done).toBe(1)
+    expect(inspectGroup(s, plan, 'vocab', items).correct).toBe(1)
     expect(decodeCode(encodeCode(s))).toEqual(s)
   })
   it('upgrades v4 and valid snapshots once without altering old keys; existing v5 wins', () => {

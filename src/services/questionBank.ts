@@ -1,58 +1,10 @@
 import { LEVELS, mapLevels, type Level, type LevelMap } from '../domain/progress/state'
 import type { StudyItemRef } from '../domain/learning/types'
 import { BANK_KINDS, type BankKind, type Banks } from '../domain/questions'
+import { assertBank, vocabCount } from '../domain/bankContract.mjs'
 export type Counts = LevelMap<Record<BankKind, number | null>>
 const object = (v: unknown): v is Record<string, unknown> =>
   !!v && typeof v === 'object' && !Array.isArray(v)
-const strings = (v: unknown): v is string[] =>
-  Array.isArray(v) && v.every((x) => typeof x === 'string' && x.trim().length > 0)
-function question(v: unknown): boolean {
-  return (
-    object(v) &&
-    typeof v.q === 'string' &&
-    v.q.trim().length > 0 &&
-    typeof v.answer === 'string' &&
-    v.answer.trim().length > 0 &&
-    strings(v.distractors) &&
-    v.distractors.length === 3 &&
-    new Set([v.answer, ...v.distractors]).size === 4 &&
-    typeof v.explanation === 'string' &&
-    v.explanation.trim().length > 0
-  )
-}
-function valid(kind: BankKind, v: unknown, level: Level): boolean {
-  if (!object(v)) return false
-  if (kind === 'vocab')
-    return (
-      ['w', 'r'].every((k) => typeof v[k] === 'string' && (v[k] as string).trim().length > 0) &&
-      ['zh', 'en'].every((k) => typeof v[k] === 'string') &&
-      ((v.zh as string).trim().length > 0 || (v.en as string).trim().length > 0)
-    )
-  if (kind === 'grammar')
-    return typeof v.id === 'string' && new RegExp(`^g-${level}-\\d{3,}$`).test(v.id) && question(v)
-  if (!LEVELS.includes(v.level as Level) || typeof v.id !== 'string' || !v.id.trim()) return false
-  if (kind === 'listening')
-    return typeof v.script === 'string' && v.script.trim().length > 0 && question(v)
-  return (
-    ['title', 'type', 'text'].every(
-      (k) => typeof v[k] === 'string' && (v[k] as string).trim().length > 0,
-    ) &&
-    Array.isArray(v.notes) &&
-    v.notes.every(
-      (n) =>
-        object(n) &&
-        typeof n.term === 'string' &&
-        n.term.trim().length > 0 &&
-        typeof n.meaning === 'string' &&
-        n.meaning.trim().length > 0,
-    ) &&
-    Array.isArray(v.questions) &&
-    v.questions.length > 0 &&
-    v.questions.every(
-      (q) => object(q) && typeof q.id === 'string' && q.id.trim().length > 0 && question(q),
-    )
-  )
-}
 export function createQuestionBank(
   fetcher: typeof fetch = globalThis.fetch,
   base = import.meta.env.BASE_URL,
@@ -68,16 +20,7 @@ export function createQuestionBank(
         const res = await fetcher(`${base}data/${file}`)
         if (!res.ok) throw Error()
         const items: unknown = await res.json()
-        if (!Array.isArray(items) || !items.every((x) => valid(kind, x, level))) throw Error()
-        if (
-          kind !== 'vocab' &&
-          new Set(items.map((x) => (x as { id: string }).id)).size !== items.length
-        )
-          throw Error()
-        if (kind === 'reading') {
-          const ids = items.flatMap((x) => (x as Banks['reading']).questions.map((q) => q.id))
-          if (new Set(ids).size !== ids.length) throw Error()
-        }
+        assertBank(kind, items, level)
         cache.set(file, items)
         return items
       } catch {
@@ -134,7 +77,11 @@ export function createQuestionBank(
         LEVELS.flatMap((lv) =>
           BANK_KINDS.map(async (kind) => {
             const result = await load(kind, lv)
-            counts[lv][kind] = result.failed ? null : result.items.length
+            counts[lv][kind] = result.failed
+              ? null
+              : kind === 'vocab'
+                ? vocabCount(result.items as Banks['vocab'][])
+                : result.items.length
           }),
         ),
       )

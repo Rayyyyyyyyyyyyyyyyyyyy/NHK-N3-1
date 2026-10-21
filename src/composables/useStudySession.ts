@@ -5,7 +5,7 @@ import type { Banks, BankKind } from '../domain/questions'
 import { useProgressStore } from '../stores/progress'
 import { localDate } from '../domain/learning/calendar'
 import { dayKey } from '../domain/learning/types'
-import { unfinished } from '../domain/learning/plans'
+import { inspectGroup } from '../domain/learning/plans'
 export function useStudySession<K extends BankKind>(kind: K, items: Ref<Banks[K][]>) {
   const route = inject(routeLocationKey, undefined),
     store = useProgressStore(),
@@ -42,17 +42,9 @@ export function useStudySession<K extends BankKind>(kind: K, items: Ref<Banks[K]
       return
     }
     const plan = store.session.state.plans[dayKey(today.value, level)]
-    const refs = unfinished(store.session.state, plan, kind)
-    const all = plan.groups[kind]?.targets ?? []
-    const find = (id: string) =>
-      items.value.find((x) =>
-        kind === 'vocab' ? (x as Banks['vocab']).w === id : (x as Banks['grammar']).id === id,
-      )
-    missing.value = all.filter((r) => !find(r.id)).length
-    selected.value = refs.flatMap((r) => {
-      const item = find(r.id)
-      return item ? [item] : []
-    })
+    const group = inspectGroup(store.session.state, plan, kind, items.value)
+    missing.value = group.missing.length
+    selected.value = group.selected
     if (items.value.length && !plan.started) store.startPlan(today.value, level, kind)
   }
   watch([items, () => route?.fullPath, today], reset, { immediate: true })

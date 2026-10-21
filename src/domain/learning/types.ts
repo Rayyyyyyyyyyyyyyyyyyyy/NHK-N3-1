@@ -1,5 +1,6 @@
 import type { Level } from '../progress/state'
 export type StudyKind = 'vocab' | 'grammar' | 'reading' | 'listening'
+export const taskLimit = { vocab: 10, grammar: 5, reading: 1, listening: 3 }
 export type StudyMode = 'flashcard' | 'pronunciation' | 'grammar' | 'reading' | 'listening'
 export interface StudyItemRef {
   level: Level

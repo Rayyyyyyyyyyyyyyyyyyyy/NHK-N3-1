@@ -9,7 +9,7 @@
 ## 功能
 
 - **首頁**：五個等級各一組整體進度、進階建議（達標可一鍵切換到下一等級）、可建立及續做的今日任務、錯題／到期複習入口、進度匯出／匯入（base64 進度碼）、備考路線
-- **單字**：N5 718 字／N4 666 字／N3 2,139 字／N2 1,748 字／N1 2,699 字，翻卡記憶／讀音測驗雙模式，誘答同等級抽取，點漢字可查 [kanjiapi.dev](https://kanjiapi.dev) 音讀訓讀
+- **單字**：按字面計算 N5 710 項／N4 664 項／N3 2,102 項／N2 1,741 項／N1 2,685 項，翻卡記憶／讀音測驗雙模式，誘答同等級抽取，點漢字可查 [kanjiapi.dev](https://kanjiapi.dev) 音讀訓讀。多讀音原始內容完整保留，共用同字面的學習進度
 - **文法**：N5 80 題／N4 81 題／N3 30 題／N2 40 題／N1 25 題句子填空
 - **讀解**：N5 2 篇／N4 2 篇／N3 3 篇／N2 4 篇／N1 3 篇＋延伸練習連結（NHK 從新聞學日語／NHK NEWS WEB EASY）
 - **聽力**：N5 4 題／N4 4 題／N3 7 題／N2 7 題／N1 6 題語音朗讀測驗（speechSynthesis，含進度條、暫停／繼續／停止）＋ YouTube 文法課程播放清單
@@ -51,6 +51,10 @@ npm run dev
 ## 題庫維護
 
 題庫放在 `public/data/`，建置後保持 `data/*.json` 靜態路徑，執行時按需取得。首頁以 `counts.json` 取得分母，不需下載完整題庫。
+
+單字分母按同等級的不同字面計算，與掌握／錯題／排程的身份一致；原始題庫列數仍為 N5 718／N4 666／N3 2,139／N2 1,748／N1 2,699。不同讀音不刪除，也不遷移既有進度。用語見 [GLOSSARY.md](GLOSSARY.md)。
+
+`src/domain/bankContract.mjs` 提供 CLI 與執行期共用的純題庫驗證及單字計數；使用原生 ESM，讓 Node 指令與 Vite 直接載入同一份規則。檔案讀寫、counts 比較及內容保留檢查由工具負責，執行期保留載入、成功快取及重試。
 
 文法題的穩定 ID 不隨排序改變。新增缺少 ID 的題目時，可執行 `node tools/add-grammar-ids.mjs`；它保留既有 ID，並以 `tools/grammar-id-sequences.json` 保存已使用序號的上限，避免刪題後重用 ID；勿重設此檔。讀解子題亦有獨立穩定 ID，執行 `node tools/add-reading-ids.mjs` 可補缺漏；`tools/reading-id-sequence.json` 保存 high-water mark，不得重設或依排序重編。調整題庫數量後執行 `node tools/check-data.mjs --write-counts` 更新計數，再執行 `npm run check:data`。這些產生指令會寫入題庫或計數檔，應檢閱差異。`tools/content-baseline.json` 是本次擴充前的固定資產保留基線；測試對照其原始 commit、ID 與雜湊，不應為通過測試而重設。
 

@@ -7,6 +7,7 @@ import { useStudySession } from '../composables/useStudySession'
 import { vocabQueue } from '../domain/learning/plans'
 import { quizFor, type Vocab } from '../domain/questions'
 import { itemKey } from '../domain/learning/types'
+import { vocabCount } from '../domain/bankContract.mjs'
 import LearningChoice from '../components/LearningChoice.vue'
 import FlashcardExercise from '../components/FlashcardExercise.vue'
 import BankStatus from '../components/BankStatus.vue'
@@ -73,7 +74,7 @@ function nextQuestion() {
   <p class="meta-row">
     <span
       >已掌握 <b>{{ Object.keys(store.session.state.vKnown[level]).length }}</b> ／
-      {{ items.length }}　到期 {{ dueCount }}</span
+      {{ vocabCount(items) }}　到期 {{ dueCount }}</span
     >
   </p>
   <div class="btn-row">

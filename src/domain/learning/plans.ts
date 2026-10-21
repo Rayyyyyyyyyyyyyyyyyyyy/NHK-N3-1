@@ -3,6 +3,7 @@ import type { ProgressState, Level } from '../progress/state'
 import {
   dayKey,
   itemKey,
+  taskLimit,
   type StudyItemRef,
   type StudyKind,
   type DailyGroup,
@@ -62,7 +63,6 @@ export function orderRefs(
     return pa[0] - pb[0] || pa[1].localeCompare(pb[1]) || itemKey(a).localeCompare(itemKey(b))
   })
 }
-export const taskLimit = { vocab: 10, grammar: 5, reading: 1, listening: 3 }
 export function generateGroup(
   state: ProgressState,
   refs: StudyItemRef[],
@@ -72,30 +72,65 @@ export function generateGroup(
   const targets = orderRefs(state, refs, today).slice(0, taskLimit[kind])
   return { status: targets.length ? 'ready' : 'empty', targets, note: '' }
 }
-export function groupProgress(state: ProgressState, plan: DailyPlan, kind: StudyKind) {
-  const group = plan.groups[kind],
-    day = state.days[dayKey(plan.date, plan.level)]
-  const targets = group?.targets ?? []
-  const done = targets.filter((r) =>
-    kind === 'reading' ? day?.articles.includes(r.id) : day?.items.includes(itemKey(r)),
-  ).length
-  const correct = targets.filter((r) =>
-    kind === 'reading'
-      ? state.rDone[plan.level].includes(r.id)
-      : day?.correctItems.includes(itemKey(r)),
-  ).length
+export function inspectGroup<K extends StudyKind>(
+  state: ProgressState,
+  plan: DailyPlan,
+  kind: K,
+  items?: Banks[K][],
+) {
+  const targets = plan.groups[kind]?.targets ?? [],
+    day = state.days[dayKey(plan.date, plan.level)],
+    resolved = targets.map((ref) => ({
+      ref,
+      item: items?.find((item) =>
+        kind === 'vocab'
+          ? (item as Banks['vocab']).w === ref.id
+          : (item as Banks['grammar']).id === ref.id,
+      ),
+    })),
+    missing = items === undefined ? [] : resolved.filter((x) => !x.item).map((x) => x.ref),
+    valid = resolved.filter((x) => items === undefined || x.item),
+    done = (ref: StudyItemRef) =>
+      kind === 'reading' ? day?.articles.includes(ref.id) : day?.items.includes(itemKey(ref))
   return {
-    done,
+    done: valid.filter((x) => done(x.ref)).length,
     total: targets.length,
-    correct,
-    complete: targets.length > 0 && done === targets.length,
+    correct: valid.filter(({ ref }) =>
+      kind === 'reading'
+        ? state.rDone[plan.level].includes(ref.id)
+        : day?.correctItems.includes(itemKey(ref)),
+    ).length,
+    complete:
+      items !== undefined &&
+      targets.length > 0 &&
+      !missing.length &&
+      valid.every((x) => done(x.ref)),
+    missing,
+    selected: valid.flatMap(({ ref, item }) => (item && !done(ref) ? [item] : [])),
   }
 }
-export function unfinished(state: ProgressState, plan: DailyPlan, kind: StudyKind) {
-  const day = state.days[dayKey(plan.date, plan.level)]
-  return (plan.groups[kind]?.targets ?? []).filter(
-    (r) => !(kind === 'reading' ? day?.articles.includes(r.id) : day?.items.includes(itemKey(r))),
-  )
+export function repairGroup<K extends StudyKind>(
+  state: ProgressState,
+  plan: DailyPlan,
+  kind: K,
+  items: Banks[K][],
+): DailyGroup | undefined {
+  const old = plan.groups[kind]
+  if (!old) return
+  const missing = new Set(inspectGroup(state, plan, kind, items).missing.map(itemKey)),
+    keep = old.targets.filter((r) => !missing.has(itemKey(r))),
+    kept = new Set(keep.map(itemKey)),
+    replacement = orderRefs(
+      state,
+      refsFor(kind, plan.level, items).filter((r) => !kept.has(itemKey(r))),
+      plan.date,
+    ).slice(0, Math.min(taskLimit[kind], old.targets.length) - keep.length),
+    targets = [...keep, ...replacement]
+  return {
+    status: targets.length ? 'ready' : 'empty',
+    targets,
+    note: `已修復 ${missing.size} 個失效目標；目前 ${targets.length} 題，原有效目標及完成量保留。`,
+  }
 }
 export function vocabQueue(
   items: Banks['vocab'][],

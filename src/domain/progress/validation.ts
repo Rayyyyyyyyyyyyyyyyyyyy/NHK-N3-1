@@ -1,6 +1,6 @@
 import { LEVELS, type LegacyState, type ProgressState } from './state'
 import { validDate } from '../learning/calendar'
-import { dayKey, itemKey, type StudyItemRef, type StudyMode } from '../learning/types'
+import { dayKey, itemKey, taskLimit, type StudyItemRef, type StudyMode } from '../learning/types'
 export const object = (v: unknown): v is Record<string, unknown> =>
   !!v && typeof v === 'object' && !Array.isArray(v)
 const keys = (v: Record<string, unknown>, required: string[], optional: string[] = []) =>
@@ -185,7 +185,7 @@ export function validateV5(v: unknown): v is ProgressState {
               (kind !== 'reading' || r.articleId === r.id),
           ) &&
           new Set(g.targets.map(itemKey)).size === g.targets.length &&
-          g.targets.length <= ({ vocab: 10, grammar: 5, reading: 1, listening: 3 }[kind] ?? 0) &&
+          g.targets.length <= (taskLimit[kind as StudyItemRef['kind']] ?? 0) &&
           (g.status === 'empty' ? g.targets.length === 0 : g.targets.length > 0),
       )
     })

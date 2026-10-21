@@ -7,12 +7,11 @@ import { recordResult, completeArticle, pruneDays } from '../domain/learning/red
 import { localDate } from '../domain/learning/calendar'
 import {
   dayKey,
-  itemKey,
   type LearningInput,
   type ArticleCompletion,
   type StudyKind,
 } from '../domain/learning/types'
-import { refsFor, generateGroup, orderRefs, taskLimit } from '../domain/learning/plans'
+import { refsFor, generateGroup, repairGroup } from '../domain/learning/plans'
 import { questionBank } from '../services/questionBank'
 export const useProgressStore = defineStore('progress', () => {
   const storage = createProgressStorage(),
@@ -120,21 +119,8 @@ export const useProgressStore = defineStore('progress', () => {
       JSON.stringify(old.targets)
     )
       return
-    const available = refsFor(kind, level, result.items),
-      keys = new Set(available.map(itemKey)),
-      keep = old.targets.filter((r) => keys.has(itemKey(r)))
-    const replacement = orderRefs(
-      session.state,
-      available.filter((r) => !keep.some((k) => itemKey(k) === itemKey(r))),
-      date,
-    ).slice(0, Math.min(taskLimit[kind], old.targets.length) - keep.length)
     edit((s) => {
-      const targets = [...keep, ...replacement]
-      s.plans[key].groups[kind] = {
-        status: targets.length ? 'ready' : 'empty',
-        targets,
-        note: `已修復 ${old.targets.length - keep.length} 個失效目標；目前 ${targets.length} 題，原有效目標及完成量保留。`,
-      }
+      s.plans[key].groups[kind] = repairGroup(s, s.plans[key], kind, result.items)
     })
   }
   return {

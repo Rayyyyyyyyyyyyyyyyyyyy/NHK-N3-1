@@ -5,8 +5,9 @@ import { RouterLink } from 'vue-router'
 import { useProgressStore } from '../stores/progress'
 import { localDate } from '../domain/learning/calendar'
 import { questionBank } from '../services/questionBank'
-import { dayKey, itemKey, type StudyKind } from '../domain/learning/types'
-import { refsFor, groupProgress } from '../domain/learning/plans'
+import { dayKey, type StudyKind } from '../domain/learning/types'
+import { inspectGroup } from '../domain/learning/plans'
+import { BANK_KINDS, type Banks } from '../domain/questions'
 const store = useProgressStore(),
   now = useNow({ interval: 1000 }),
   today = computed(() => localDate(now.value)),
@@ -39,25 +40,21 @@ const needsBuild = computed(
     (!plan.value.started && branch.value !== plan.value.branch) ||
     groups.value.some((kind) => !plan.value?.groups[kind]),
 )
-type TargetCheck = { status: 'pending' | 'error' | 'ready'; missing: string[] }
+type TargetCheck = { status: 'pending' | 'error' | 'ready'; items?: Banks[StudyKind][] }
 const checks = ref<Partial<Record<StudyKind, TargetCheck>>>({})
 let checkGeneration = 0
 async function checkTargets(kind: StudyKind, generation = checkGeneration) {
   const origin = plan.value,
     group = origin?.groups[kind]
   if (!origin || !group || group.status !== 'ready') return
-  checks.value[kind] = { status: 'pending', missing: [] }
+  checks.value[kind] = { status: 'pending' }
   const result = await questionBank.load(kind, origin.level)
   if (generation !== checkGeneration) return
   if (result.failed) {
-    checks.value[kind] = { status: 'error', missing: [] }
+    checks.value[kind] = { status: 'error' }
     return
   }
-  const available = new Set(refsFor(kind, origin.level, result.items).map(itemKey))
-  checks.value[kind] = {
-    status: 'ready',
-    missing: group.targets.filter((r) => !available.has(itemKey(r))).map(itemKey),
-  }
+  checks.value[kind] = { status: 'ready', items: result.items }
 }
 watch(
   [today, level, () => JSON.stringify(plan.value?.groups)],
@@ -68,26 +65,25 @@ watch(
   },
   { immediate: true },
 )
-function progress(kind: StudyKind) {
-  if (!plan.value) return { done: 0, total: 0, correct: 0, complete: false }
-  const raw = groupProgress(store.session.state, plan.value, kind),
-    check = checks.value[kind]
-  if (!check || check.status !== 'ready') return { ...raw, complete: false }
-  const validPlan = {
-    ...plan.value,
-    groups: {
-      ...plan.value.groups,
-      [kind]: {
-        ...plan.value.groups[kind]!,
-        targets: plan.value.groups[kind]!.targets.filter(
-          (r) => !check.missing.includes(itemKey(r)),
-        ),
-      },
-    },
-  }
-  const valid = groupProgress(store.session.state, validPlan, kind)
-  return { ...valid, total: raw.total, complete: check.missing.length === 0 && raw.complete }
-}
+const progress = computed(
+  () =>
+    Object.fromEntries(
+      BANK_KINDS.map((kind) => {
+        const check = checks.value[kind]
+        return [
+          kind,
+          plan.value
+            ? inspectGroup(
+                store.session.state,
+                plan.value,
+                kind,
+                check?.status === 'ready' ? check.items : undefined,
+              )
+            : { done: 0, total: 0, correct: 0, complete: false, missing: [], selected: [] },
+        ]
+      }),
+    ) as Record<StudyKind, ReturnType<typeof inspectGroup>>,
+)
 async function repair(kind: StudyKind) {
   repairError.value = ''
   try {
@@ -137,17 +133,17 @@ async function repair(kind: StudyKind) {
         v-for="(kind, index) in groups"
         :key="kind"
         class="task-group"
-        :class="{ 'task-complete': progress(kind).complete }"
+        :class="{ 'task-complete': progress[kind].complete }"
       >
         <div class="task-number" aria-hidden="true">
-          {{ progress(kind).complete ? '✓' : String(index + 1).padStart(2, '0') }}
+          {{ progress[kind].complete ? '✓' : String(index + 1).padStart(2, '0') }}
         </div>
         <div class="task-content">
           <div class="task-heading">
             <h4>{{ labels[kind] }}</h4>
             <span v-if="status(kind) === 'uncreated'" class="task-state-label">待建立</span
             ><span v-else-if="checks[kind]?.status === 'ready'" class="task-quantity"
-              >{{ progress(kind).done }} <span>/ {{ progress(kind).total }}</span></span
+              >{{ progress[kind].done }} <span>/ {{ progress[kind].total }}</span></span
             >
           </div>
           <p v-if="status(kind) === 'pending'" role="status">載入中…</p>
@@ -174,22 +170,22 @@ async function repair(kind: StudyKind) {
               <p>題庫請求失敗，完成量暫無法確認；已保存目標仍保留。</p>
               <button class="text-action" @click="checkTargets(kind)">重試目標檢查</button>
             </div>
-            <p v-else-if="checks[kind]?.missing.length" class="task-error" role="status">
-              {{ checks[kind]?.missing.length }} 個目標已不可用，請修復計畫；有效目標仍可續做。
+            <p v-else-if="progress[kind].missing.length" class="task-error" role="status">
+              {{ progress[kind].missing.length }} 個目標已不可用，請修復計畫；有效目標仍可續做。
             </p>
             <template v-if="checks[kind]?.status === 'ready'"
               ><div class="task-progress-track" aria-hidden="true">
                 <div
                   :style="{
-                    width: `${progress(kind).total ? (progress(kind).done / progress(kind).total) * 100 : 0}%`,
+                    width: `${progress[kind].total ? (progress[kind].done / progress[kind].total) * 100 : 0}%`,
                   }"
                 ></div>
               </div>
               <p class="task-description">
-                已做 {{ progress(kind).done }} / {{ progress(kind).total
-                }}<span v-if="progress(kind).complete"> · 本組完成</span
+                已做 {{ progress[kind].done }} / {{ progress[kind].total
+                }}<span v-if="progress[kind].complete"> · 本組完成</span
                 ><span v-if="kind !== 'reading'">
-                  · 最新答對／記住 {{ progress(kind).correct }}</span
+                  · 最新答對／記住 {{ progress[kind].correct }}</span
                 ><span v-else> · 整篇掌握另見讀解列表</span>
               </p></template
             >
@@ -199,10 +195,10 @@ async function repair(kind: StudyKind) {
                 :to="{ path: `/${kind}`, query: { study: 'daily', date: today, group: kind } }"
                 @click="store.startPlan(today, level, kind)"
                 >{{
-                  progress(kind).complete ? '查看練習' : progress(kind).done ? '繼續練習' : '開始'
+                  progress[kind].complete ? '查看練習' : progress[kind].done ? '繼續練習' : '開始'
                 }}<span aria-hidden="true"> →</span></RouterLink
               ><button
-                v-if="checks[kind]?.missing.length"
+                v-if="progress[kind].missing.length"
                 class="text-action"
                 @click="repair(kind)"
               >

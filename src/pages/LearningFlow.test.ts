@@ -9,10 +9,10 @@ import ListeningPage from './ListeningPage.vue'
 import ReviewPage from './ReviewPage.vue'
 import HomePage from './HomePage.vue'
 import { useProgressStore } from '../stores/progress'
-import { questionBank } from '../services/questionBank'
+import { questionBank, createQuestionBank } from '../services/questionBank'
 import { dayKey, itemKey, type StudyKind, type LearningInput } from '../domain/learning/types'
 import { localDate } from '../domain/learning/calendar'
-import { groupProgress } from '../domain/learning/plans'
+import { inspectGroup } from '../domain/learning/plans'
 import { encodeCode, defaultState, mapLevels } from '../domain/progress/state'
 import { STORAGE_KEY } from '../services/progressStorage'
 const vocab = Array.from({ length: 12 }, (_, i) => ({
@@ -123,6 +123,28 @@ it('initial home requests counts only; tasks remain fixed through retries, reloa
   setActivePinia(createPinia())
   expect(JSON.stringify(useProgressStore().session.state.plans[key].groups)).toBe(targets)
 })
+it('shows full word mastery on vocab and home while preserving alternate-reading rows', async () => {
+  const items = [vocab[0], { ...vocab[0], r: 'べつのよみ' }, vocab[1]]
+  const bank = createQuestionBank(
+    vi.fn(async (url: string) => {
+      if (url.endsWith('counts.json')) throw Error('counts unavailable')
+      return { ok: true, json: async () => (url.includes('vocab-') ? items : []) } as Response
+    }) as typeof fetch,
+  )
+  vi.mocked(questionBank.load).mockImplementation(bank.load)
+  vi.mocked(questionBank.counts).mockImplementation(bank.counts)
+  const store = useProgressStore()
+  for (const item of items) store.markVocab('n3', item.w, true)
+  const before = store.exportCode()
+  const vocabPage = await page(VocabPage, '/vocab')
+  expect(vocabPage.wrapper.find('.meta-row').text()).toMatch(/已掌握\s*2\s*／\s*2/)
+  const home = await page(HomePage, '/')
+  const progress = home.wrapper.find('.current-progress-card .progress-row')
+  expect(progress.text()).toMatch(/2\s*\/\s*2/)
+  expect(progress.find('.progress-fill').attributes('style')).toContain('width: 100%')
+  expect((await bank.load('vocab', 'n3')).items).toEqual(items)
+  expect(store.exportCode()).toBe(before)
+})
 it('writes delayed plans to the captured level/date and retries only failed groups', async () => {
   const store = useProgressStore()
   let resolve!: (v: unknown) => void
@@ -186,7 +208,7 @@ it('grammar daily resumes saved unfinished targets; a wrong answer counts once a
   const second = grammar.find((g) => g.id === plan.groups.grammar!.targets[1].id)!
   expect(wrapper.text()).toContain(second.q)
   await button(wrapper, second.distractors[0])
-  expect(groupProgress(store.session.state, plan, 'grammar').done).toBe(2)
+  expect(inspectGroup(store.session.state, plan, 'grammar', grammar).done).toBe(2)
   expect(wrapper.text()).toContain(second.explanation)
   expect(store.session.state.mistakes[itemKey(submitted('grammar', second.id).ref)].pending).toBe(
     true,
@@ -205,7 +227,7 @@ it('reading daily completion differs from mastery, while review retains article 
   await button(wrapper, grammar[0].distractors[0])
   await button(wrapper, grammar[1].answer)
   const plan = store.session.state.plans[dayKey(localDate(), 'n3')]
-  expect(groupProgress(store.session.state, plan, 'reading').done).toBe(1)
+  expect(inspectGroup(store.session.state, plan, 'reading', reading).done).toBe(1)
   expect(store.session.state.rDone.n3).toEqual([])
   const review = await page(ReviewPage, '/review')
   expect(review.wrapper.text()).toContain('文章上下文')
@@ -297,7 +319,7 @@ it('expired daily mode returns to today; midnight submissions do not backfill ye
   expect(wrapper.text()).toContain('已過期')
   expect(wrapper.find('.option-btn').exists()).toBe(false)
   store.recordLearning(submitted('grammar', plan.groups.grammar!.targets[0].id))
-  expect(groupProgress(store.session.state, plan, 'grammar').done).toBe(0)
+  expect(inspectGroup(store.session.state, plan, 'grammar', grammar).done).toBe(0)
   expect(store.session.state.days[dayKey('2026-10-17', 'n3')].items).toHaveLength(1)
 })
 it('repairs only missing targets, preserves valid IDs and completion; zero never appears complete', async () => {
@@ -315,13 +337,13 @@ it('repairs only missing targets, preserves valid IDs and completion; zero never
   expect(p.groups.grammar!.targets.map((r) => r.id)).toEqual(
     expect.arrayContaining(old.filter((id) => id !== old[1])),
   )
-  expect(groupProgress(store.session.state, p, 'grammar').done).toBe(1)
+  expect(inspectGroup(store.session.state, p, 'grammar', grammar).done).toBe(1)
   expect(p.groups.grammar!.note).toContain('失效目標')
   vi.mocked(questionBank.load).mockResolvedValue({ items: [], failed: false })
   await store.repairPlan(localDate(), 'n3', 'grammar')
   expect(store.session.state.plans[key].groups.grammar!.status).toBe('empty')
   expect(
-    groupProgress(store.session.state, store.session.state.plans[key], 'grammar').complete,
+    inspectGroup(store.session.state, store.session.state.plans[key], 'grammar', []).complete,
   ).toBe(false)
 })
 it('locks only the started deep branch; quota leaves memory exportable and rejects overwrite', async () => {
